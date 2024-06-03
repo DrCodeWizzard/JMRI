@@ -5,6 +5,7 @@ import java.util.regex.Pattern;
 
 import javax.annotation.CheckReturnValue;
 
+import jmri.NamedBean.BadSystemNameException;
 import jmri.jmrix.can.CanMessage;
 import jmri.jmrix.can.CanReply;
 
@@ -74,16 +75,36 @@ public class OlcbAddress {
      * @param s hex coded string of address
      */
     public OlcbAddress(String s) {
-        aString = s;
-        // now parse
         // This is done manually, rather than via regular expressions, for performance reasons.
+
+        // check for leading T, if so convert to numeric form
+        if (s.startsWith("T")) {
+            int from;
+            try {
+                from = Integer.parseInt(s.substring(1));
+            } catch (NumberFormatException e) {
+                from = 0;
+            }
+
+            int DD = (from-1) & 0x3;
+            int aaaaaa = (( (from-1) >> 2)+1 ) & 0x3F;
+            int AAA = ( (from) >> 8) & 0x7;
+            long event = 0x0101020000FF0000L | (AAA << 9) | (aaaaaa << 3) | (DD << 1);
+
+            s = String.format("%016X;%016X", event, event+1);
+            log.debug(" converted to {}", s);
+        }
+
+        aString = s;
+
+        // numeric address string format
         if (aString.contains(";")) {
             // multi-part address; leave match false and aFrame null
         } else if (aString.contains(".")) {
             // dotted form, 7 dots
             String[] terms = s.split("\\.");
             if (terms.length != 8) {
-                log.error("unexpected number of terms: {}, address is {}", terms.length, s);
+                log.debug("unexpected number of terms: {}, address is {}", terms.length, s);
             }
             int[] tFrame = new int[terms.length];
             try {
@@ -284,7 +305,7 @@ public class OlcbAddress {
 
     public EventID toEventID() {
         byte[] b = new byte[8];
-        for (int i = 0; i < 8; ++i) b[i] = (byte)aFrame[i];
+        for (int i = 0; i < Math.min(8, aFrame.length); ++i) b[i] = (byte)aFrame[i];
         return new EventID(b);
     }
 
@@ -297,29 +318,45 @@ public class OlcbAddress {
      * @throws jmri.NamedBean.BadSystemNameException if provided name is an invalid format.
      */
     @Nonnull
-    public static String validateSystemNameFormat(@Nonnull String name, @Nonnull java.util.Locale locale, @Nonnull String prefix) throws jmri.NamedBean.BadSystemNameException {
-        //System.err.printf("*** OlcbAddress.validateSystemNameFormat(%s,[locale],%s)\n",name,prefix);
-        //StackTraceElement traceback[] = Thread.currentThread().getStackTrace();
-        //for (int i=1; i < 6 && i < traceback.length; i++) {
-        //    StackTraceElement tb = traceback[i];
-        //    System.err.printf("*** %s.%s (%s at %d)\n",
-        //              tb.getClassName(),tb.getMethodName(),
-        //              tb.getFileName(),tb.getLineNumber());
-        //}
+    public static String validateSystemNameFormat(@Nonnull String name, @Nonnull java.util.Locale locale,
+        @Nonnull String prefix) throws BadSystemNameException {
         String oAddr = name.substring(prefix.length());
         OlcbAddress a = new OlcbAddress(oAddr);
         OlcbAddress[] v = a.split();
         if (v == null) {
-            throw new jmri.NamedBean.BadSystemNameException(locale,"InvalidSystemNameCustom","Did not find usable system name: " + name + " to a valid Olcb sensor address");
+            throw new BadSystemNameException(locale,"InvalidSystemNameCustom","Did not find usable system name: " + name + " to a valid Olcb address");
         }
         switch (v.length) {
             case 1:
             case 2:
                 break;
             default:
-                throw new jmri.NamedBean.BadSystemNameException(locale,"InvalidSystemNameCustom","Wrong number of events in address: " + name);
+                throw new BadSystemNameException(locale,"InvalidSystemNameCustom","Wrong number of events in address: " + name);
         }
         return name;
+    }
+
+    /**
+     * Validates 2 part Hardware Address Strings for OpenLCB format.
+     * @param name   the system name to validate.
+     * @param locale the locale for a localized exception.
+     * @param prefix system prefix, eg. MT for OpenLcb turnout.
+     * @return the unchanged value of the name parameter.
+     * @throws jmri.NamedBean.BadSystemNameException if provided name is an invalid format.
+     */
+    @Nonnull
+    public static String validateSystemNameFormat2Part(@Nonnull String name, @Nonnull java.util.Locale locale,
+        @Nonnull String prefix) throws BadSystemNameException {
+        String oAddr = name.substring(prefix.length());
+        OlcbAddress a = new OlcbAddress(oAddr);
+        OlcbAddress[] v = a.split();
+        if (v == null) {
+            throw new BadSystemNameException(locale,"InvalidSystemNameCustom","Did not find usable system name: " + name + " to a valid Olcb address");
+        }
+        if ( v.length == 2 ) {
+            return name;
+        }
+        throw new BadSystemNameException(locale,"InvalidSystemNameCustom","Address requires 2 Events: " + name);
     }
 
     /**

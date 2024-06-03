@@ -2,19 +2,12 @@ package jmri.jmrit.logixng.util.parser.functions;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import jmri.InstanceManager;
 import jmri.jmrit.logixng.SymbolTable;
 import jmri.jmrit.logixng.implementation.DefaultConditionalNG;
 import jmri.jmrit.logixng.implementation.DefaultSymbolTable;
-import jmri.jmrit.logixng.util.parser.ExpressionNode;
-import jmri.jmrit.logixng.util.parser.ExpressionNodeFloatingNumber;
-import jmri.jmrit.logixng.util.parser.ExpressionNodeString;
-import jmri.jmrit.logixng.util.parser.ExpressionNodeTrue;
-import jmri.jmrit.logixng.util.parser.Token;
-import jmri.jmrit.logixng.util.parser.TokenType;
-import jmri.jmrit.logixng.util.parser.WrongNumberOfParametersException;
+import jmri.jmrit.logixng.util.parser.*;
 import jmri.util.JUnitUtil;
 
 import org.junit.After;
@@ -50,7 +43,7 @@ public class ClockFunctionsTest {
     @Test
     @SuppressWarnings("deprecation")        // Date.getMinutes, Date.getHours
     public void testSystemClockFunction() throws Exception {
-        ClockFunctions.SystemClockFunction systemClockFunction = new ClockFunctions.SystemClockFunction();
+        Function systemClockFunction = InstanceManager.getDefault(FunctionManager.class).get("systemClock");
         Assert.assertEquals("strings matches", "systemClock", systemClockFunction.getName());
 
         SymbolTable symbolTable = new DefaultSymbolTable(new DefaultConditionalNG("IQC1", null));
@@ -69,7 +62,7 @@ public class ClockFunctionsTest {
     @Test
     @SuppressWarnings("deprecation")        // Date.getMinutes, Date.getHours
     public void testFastClockFunction() throws Exception {
-        ClockFunctions.FastClockFunction fastClockFunction = new ClockFunctions.FastClockFunction();
+        Function fastClockFunction = InstanceManager.getDefault(FunctionManager.class).get("fastClock");
         Assert.assertEquals("strings matches", "fastClock", fastClockFunction.getName());
 
         SymbolTable symbolTable = new DefaultSymbolTable(new DefaultConditionalNG("IQC1", null));
@@ -83,6 +76,44 @@ public class ClockFunctionsTest {
         Assert.assertEquals(11, (int)fastClockFunction.calculate(symbolTable, getParameterList(expr_str_HOUR)));
         Assert.assertEquals(5, (int)fastClockFunction.calculate(symbolTable, getParameterList(expr_str_MIN)));
         Assert.assertEquals(minSinceMidnight, (int)fastClockFunction.calculate(symbolTable, getParameterList(expr_str_MIN_OF_DAY)));
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")        // Date.getMinutes, Date.getHours
+    public void testFastClockRateFunction() throws Exception {
+        Function fastClockRateFunction = InstanceManager.getDefault(FunctionManager.class).get("fastClockRate");
+        Assert.assertEquals("strings matches", "fastClockRate", fastClockRateFunction.getName());
+
+        SymbolTable symbolTable = new DefaultSymbolTable(new DefaultConditionalNG("IQC1", null));
+
+        jmri.Timebase fastClock = InstanceManager.getDefault(jmri.Timebase.class);
+        fastClock.setRate(1.0);
+        Assert.assertEquals(1.0, (double)fastClockRateFunction.calculate(symbolTable, getParameterList()), 0.000001);
+        fastClock.setRate(2.0);
+        Assert.assertEquals(2.0, (double)fastClockRateFunction.calculate(symbolTable, getParameterList()), 0.000001);
+        fastClock.setRate(60.0);
+        Assert.assertEquals(60.0, (double)fastClockRateFunction.calculate(symbolTable, getParameterList()), 0.000001);
+        fastClock.setRate(1.0);
+        Assert.assertEquals(1.0, (double)fastClockRateFunction.calculate(symbolTable, getParameterList()), 0.000001);
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")        // Date.getMinutes, Date.getHours
+    public void testIsFastClockRunningFunction() throws Exception {
+        Function isFastClockFunction = InstanceManager.getDefault(FunctionManager.class).get("isFastClockRunning");
+        Assert.assertEquals("strings matches", "isFastClockRunning", isFastClockFunction.getName());
+
+        SymbolTable symbolTable = new DefaultSymbolTable(new DefaultConditionalNG("IQC1", null));
+
+        jmri.Timebase fastClock = InstanceManager.getDefault(jmri.Timebase.class);
+        fastClock.setRun(false);
+        Assert.assertFalse((boolean)isFastClockFunction.calculate(symbolTable, getParameterList()));
+        fastClock.setRun(true);
+        Assert.assertTrue((boolean)isFastClockFunction.calculate(symbolTable, getParameterList()));
+        fastClock.setRun(false);
+        Assert.assertFalse((boolean)isFastClockFunction.calculate(symbolTable, getParameterList()));
+        fastClock.setRun(true);
+        Assert.assertTrue((boolean)isFastClockFunction.calculate(symbolTable, getParameterList()));
     }
 
     // The minimal setup for log4J
@@ -100,6 +131,7 @@ public class ClockFunctionsTest {
     @After
     public void tearDown() {
         jmri.jmrit.logixng.util.LogixNG_Thread.stopAllLogixNGThreads();
+        JUnitUtil.deregisterBlockManagerShutdownTask();
         JUnitUtil.tearDown();
     }
 

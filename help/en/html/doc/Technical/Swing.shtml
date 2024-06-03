@@ -5,10 +5,10 @@
   <title>JMRI: Use of Swing</title>
   <meta name="author" content="Bob Jacobsen">
   <meta name="keywords" content="JMRI technical code standards recommendation Swing">
-  <!--#include virtual="/Style.shtml" -->
+  <!--#include virtual="/help/en/parts/Style.shtml" -->
 </head>
 <body>
-  <!--#include virtual="/Header.shtml" -->
+  <!--#include virtual="/help/en/parts/Header.shtml" -->
 
   <div id="mBody">
     <!--#include virtual="Sidebar.shtml" -->
@@ -168,42 +168,19 @@
       Javadocs</a> for more information</p>
 
       <h2 id="misc">Misc</h2>
-      (This section needs more organization)
-      <p>JmriJFrame is in the wrong package for historical reasons, will eventually move to
-      jmri.util.swing.</p>
 
-      <p>Older classes, some still to be moved to jmri.util.swing, some are 1.1.8 adapters that
-      should just go away.</p>
+      <p>Prefer use of jmri.util.swing.WrapLayout to java.awt.FlowLayout, because
+      WrapLayout properly handles the case of its contents wrapping into two lines.
+      When that happens, FlowLayout will often not display the second line.</p>
 
-      <ul>
-        <li>AbstractFrameAction</li>
-
-        <li>BusyGlassPane</li>
-
-        <li>FileChooserFilter</li>
-
-        <li>FontUtil</li>
-
-        <li>JTableUtil</li>
-
-        <li>JmriInsets</li>
-
-        <li>JmriJFrame</li>
-
-        <li>JmriJFrameAction</li>
-
-        <li>JmriSpinner</li>
-
-        <li>MouseInputAdapterInstaller</li>
-
-        <li>ResizableImagePanel</li>
-
-        <li>WindowMenu</li>
-      </ul>
-
-      <!--#include virtual="/Footer.shtml" -->
+      <p>jmri.util.swing.JmriJOptionPane is preferred over javax.swing.JOptionPane.
+      The Modality of the latter will block the whole JVM UI until they are closed.
+      This causes issues with Always on Top Frames, which will also be blocked,
+      potentially with the Dialog hidden behind the Frame.</p>
+      
+      <!--#include virtual="/help/en/parts/Footer.shtml" -->
     </div> <!-- closes #mainContent-->
   </div> <!-- closes #mBody-->
-  <script src="/js/main.js"></script>
+  <script src="/js/help.js"></script>
 </body>
 </html>

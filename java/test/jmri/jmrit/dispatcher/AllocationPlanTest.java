@@ -2,8 +2,6 @@ package jmri.jmrit.dispatcher;
 
 import java.awt.GraphicsEnvironment;
 import java.util.ArrayList;
-import java.util.List;
-
 import jmri.InstanceManager;
 import jmri.util.JUnitUtil;
 
@@ -36,7 +34,7 @@ public class AllocationPlanTest {
 
     @AfterEach
     public void tearDown() {
-        JUnitUtil.deregisterBlockManagerShutdownTask();
+        JUnitUtil.clearShutDownManager();
         JUnitUtil.tearDown();
     }
 

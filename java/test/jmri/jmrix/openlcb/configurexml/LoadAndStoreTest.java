@@ -2,8 +2,6 @@ package jmri.jmrix.openlcb.configurexml;
 
 import jmri.jmrix.openlcb.OlcbSystemConnectionMemoScaffold;
 import jmri.configurexml.LoadAndStoreTestBase;
-import jmri.jmrix.openlcb.*;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -54,7 +52,7 @@ public class LoadAndStoreTest extends LoadAndStoreTestBase {
     private ArrayList<Message> messages;
 
     @BeforeEach
-    @SuppressWarnings("deprecated") // OlcbInterface(NodeID, Connection)
+    @SuppressWarnings("deprecation") // OlcbInterface(NodeID, Connection)
     @Override
     public void setUp(@TempDir java.io.File tempDir) throws IOException  {
         super.setUp(tempDir);

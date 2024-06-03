@@ -11,8 +11,6 @@ import jmri.util.ColorUtil;
 import org.jdom2.Attribute;
 import org.jdom2.DataConversionException;
 import org.jdom2.Element;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This module handles configuration for LayoutShape objects for a LayoutEditor.
@@ -23,13 +21,13 @@ public class LayoutShapeXml extends AbstractXmlAdapter {
 
     public LayoutShapeXml() {
     }
-    
+
     // default mapping fine
-    static final EnumIoNames<LayoutShape.LayoutShapeType> sTypeEnumMap 
+    static final EnumIoNames<LayoutShape.LayoutShapeType> sTypeEnumMap
             = new EnumIoNames<>(LayoutShape.LayoutShapeType.class);
-    static final EnumIoNames<LayoutShape.LayoutShapePointType> pTypeEnumMap 
+    static final EnumIoNames<LayoutShape.LayoutShapePointType> pTypeEnumMap
             = new EnumIoNames<>(LayoutShape.LayoutShapePointType.class);
-    
+
     /**
      * Default implementation for storing the contents of a LayoutShape
      *
@@ -51,6 +49,9 @@ public class LayoutShapeXml extends AbstractXmlAdapter {
             element.setAttribute("linewidth", "" + s.getLineWidth());
             element.setAttribute("lineColor", ColorUtil.colorToHexString(s.getLineColor()));
             element.setAttribute("fillColor", ColorUtil.colorToHexString(s.getFillColor()));
+            if (s.isHidden()) {
+                element.setAttribute("hidden", "true");
+            }
 
             Element elementPoints = new Element("points");
             ArrayList<LayoutShape.LayoutShapePoint> shapePoints = s.getPoints();
@@ -139,17 +140,23 @@ public class LayoutShapeXml extends AbstractXmlAdapter {
             }
         }
 
+        a = element.getAttribute("hidden");
+        if (a != null) {
+            // The attribute only exists when true
+            s.setHidden(true);
+        }
+
         Element pointsElement = element.getChild("points");
         if (pointsElement != null) {
             List<Element> elementList = pointsElement.getChildren("point");
             if (elementList != null) {
-                if (elementList.size() > 0) {
+                if (!elementList.isEmpty()) {
                     for (int i = 0; i < elementList.size(); i++) {
                         Element relem = elementList.get(i);
 
                         LayoutShape.LayoutShapePointType pointType =
                                 pTypeEnumMap.inputFromAttribute(relem.getAttribute("type"));
-                        
+
                         double x = 0.0;
                         double y = 0.0;
                         try {
@@ -170,6 +177,7 @@ public class LayoutShapeXml extends AbstractXmlAdapter {
             log.error("Layout Shape points element not found.");
         }
         p.getLayoutShapes().add(s);
+        p.unionToPanelBounds(s.getBounds());
     }
 
     private final static org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LayoutShapeXml.class);

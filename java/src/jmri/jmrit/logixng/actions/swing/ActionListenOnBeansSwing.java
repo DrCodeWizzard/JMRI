@@ -1,6 +1,5 @@
 package jmri.jmrit.logixng.actions.swing;
 
-import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.util.*;
@@ -13,7 +12,7 @@ import javax.swing.table.TableColumn;
 import jmri.InstanceManager;
 import jmri.jmrit.logixng.*;
 import jmri.jmrit.logixng.actions.ActionListenOnBeans;
-import jmri.jmrit.logixng.actions.NamedBeanType;
+import jmri.jmrit.logixng.NamedBeanType;
 import jmri.jmrit.logixng.actions.ActionListenOnBeans.NamedBeanReference;
 import jmri.util.table.ButtonEditor;
 import jmri.util.table.ButtonRenderer;

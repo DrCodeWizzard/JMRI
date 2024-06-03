@@ -14,9 +14,7 @@ import jmri.beans.PropertyChangeSupport;
 import jmri.jmrit.operations.automation.actions.*;
 import jmri.jmrit.operations.routes.RouteLocation;
 import jmri.jmrit.operations.setup.Control;
-import jmri.jmrit.operations.trains.Train;
-import jmri.jmrit.operations.trains.TrainManager;
-import jmri.jmrit.operations.trains.TrainManagerXml;
+import jmri.jmrit.operations.trains.*;
 import jmri.jmrit.operations.trains.schedules.TrainSchedule;
 import jmri.jmrit.operations.trains.schedules.TrainScheduleManager;
 
@@ -239,7 +237,7 @@ public class AutomationItem extends PropertyChangeSupport implements java.beans.
     }
     
     public TrainSchedule getTrainSchedule() {
-        if (getAction() != null && getAction().isOtherMenuEnabled()) {
+        if (getAction() != null && getAction().getCode() == ActionCodes.ACTIVATE_TRAIN_SCHEDULE) {
             return InstanceManager.getDefault(TrainScheduleManager.class).getScheduleById(_trainScheduleId);
         }
         return null;
@@ -322,14 +320,10 @@ public class AutomationItem extends PropertyChangeSupport implements java.beans.
     }
 
     public String getStatus() {
-        if (isActionRunning())
-            return Bundle.getMessage("Running");
-        if (!isActionRan())
-            return NONE;
-        if (getAction() != null)
-            return isActionSuccessful() ? getAction().getActionSuccessfulString() : getAction().getActionFailedString();
-        else
-            return "unknown"; // NOI18N
+        if (getAction() != null) {
+            return getAction().getStatus();
+        }
+        return "unknown"; // NOI18N
     }
     
     public void reset() {
@@ -398,6 +392,7 @@ public class AutomationItem extends PropertyChangeSupport implements java.beans.
         list.add(new RunAutomationAction());
         list.add(new ResumeAutomationAction());
         list.add(new StopAutomationAction());
+        list.add(new CounterAction());
         list.add(new MessageYesNoAction());
         list.add(new GotoAction());
         list.add(new GotoSuccessAction());

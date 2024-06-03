@@ -227,8 +227,10 @@ public class AutoAllocate implements Runnable {
                                 ar.getSection().getDisplayName());
                         // if the last allocated section is safe but not
                         // occupied short cut out of here
-                        if (arCurrentTransitSection.isSafe() &&
-                                activeTrain.getLastAllocatedSection().getOccupancy() != Section.OCCUPIED) {
+                        if ( (activeTrain.getLastAllocOverrideSafe() == null ||
+                                    ( activeTrain.getLastAllocOverrideSafe() != arCurrentTransitSection.getSection()))
+                                && arCurrentTransitSection.isSafe()
+                                && activeTrain.getLastAllocatedSection().getOccupancy() != Section.OCCUPIED) {
                             log.debug("Allocating Train [{}] has not arrived at Passing Point",
                                     trainName);
                             continue;
@@ -297,10 +299,10 @@ public class AutoAllocate implements Runnable {
                                                 trainName, sS.getUserName(),
                                                 _dispatcher.checkBlocksNotInAllocatedSection(sS, ar));
                                         areForwardsFree = false;
-                                    } else if (checkBlocksNotInReservedSection(activeTrain, ar) != null) {
+                                    } else if (checkBlocksNotInReservedSection(activeTrain, sS) != null) {
                                         log.debug("{}: Forward section [{}] is in conflict with [{}]",
                                                 trainName, sS.getDisplayName(),
-                                                checkBlocksNotInReservedSection(activeTrain, ar).getDisplayName());
+                                                checkBlocksNotInReservedSection(activeTrain, sS).getDisplayName());
                                         areForwardsFree = false;
 
                                     } else if (reservedSections.get(sS.getSystemName()) != null &&
@@ -484,9 +486,9 @@ public class AutoAllocate implements Runnable {
     /*
      * Check conflicting blocks acros reserved sections.
      */
-    protected Section checkBlocksNotInReservedSection(ActiveTrain at, AllocationRequest ar) {
+    protected Section checkBlocksNotInReservedSection(ActiveTrain at, Section sectionToCheck) {
         String trainName = at.getTrainName();
-        List<Block> lb = ar.getSection().getBlockList();
+        List<Block> lb = sectionToCheck.getBlockList();
         Iterator<Entry<String, String>> iterRS = reservedSections.entrySet().iterator();
         while (iterRS.hasNext()) {
             Map.Entry<String, String> pair = iterRS.next();
@@ -771,6 +773,8 @@ public class AutoAllocate implements Runnable {
             if (allocateBySafeSections &&
                     (curAS != null) &&
                     ((curAS.getSection().getOccupancy() != jmri.Section.OCCUPIED) &&
+                            (ar.getActiveTrain().getLastAllocOverrideSafe() == null ||
+                                    ( ar.getActiveTrain().getLastAllocOverrideSafe() != curAS.getSection())) &&
                             ar.getActiveTrain().getTransit()
                                     .getTransitSectionFromSectionAndSeq(curAS.getSection(), curSeq).isSafe())) {
                 // last allocated section exists and is not occupied but is a

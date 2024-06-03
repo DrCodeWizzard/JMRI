@@ -7,10 +7,10 @@
   <meta name="author" content="Bob Jacobsen">
   <meta name="author" content="Steve Young">
   <meta name="keywords" content="JMRI Openlcb hub gridconnect can frame server">
-  <!--#include virtual="/Style.shtml" -->
+  <!--#include virtual="/help/en/parts/Style.shtml" -->
 </head>
 <body>
-  <!--#include virtual="/Header.shtml" -->
+  <!--#include virtual="/help/en/parts/Header.shtml" -->
 
   <div id="mBody">
     <div id="mainContent" class="no-sidebar">
@@ -49,13 +49,15 @@
       <a href="https://www.gridconnect.com/collections/can-pc-interfaces/products/canusb-com-fd-converter-usb-can-fd-interface#documents-and-drivers"
       >gridconnect.com</a>.
       <br>Line terminations can be enabled / disabled in this USB devices output via a device setting.</p>
+      
+      <p>The <a href="../../../can/cbus/swing/hubpane/CbusHubPane.shtml">CBUS&reg; Hub Control</a> borrows code extensively from OpenLCB Hub Control.</p>
 
 
       
-      <!--#include virtual="/Footer.shtml" -->
+      <!--#include virtual="/help/en/parts/Footer.shtml" -->
     </div>
   </div>
   <!-- close #mBody -->
-  <script src="/js/main.js"></script>
+  <script src="/js/help.js"></script>
 </body>
 </html>

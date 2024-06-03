@@ -7,7 +7,6 @@ import java.util.*;
 
 import javax.annotation.Nonnull;
 import javax.annotation.OverridingMethodsMustInvokeSuper;
-import javax.swing.JOptionPane;
 
 import jmri.*;
 import jmri.jmrit.logixng.*;
@@ -16,6 +15,7 @@ import jmri.jmrit.logixng.Module;
 import jmri.managers.AbstractManager;
 import jmri.util.LoggingUtil;
 import jmri.util.ThreadingUtil;
+import jmri.util.swing.JmriJOptionPane;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 
@@ -216,10 +216,10 @@ public class DefaultLogixNGManager extends AbstractManager<LogixNG>
                 sb.append(Bundle.getMessage(helpKey));
             }
             sb.append("/<html>");
-            JOptionPane.showMessageDialog(null,
+            JmriJOptionPane.showMessageDialog(null,
                     sb.toString(),
                     Bundle.getMessage(titleKey),
-                    JOptionPane.WARNING_MESSAGE);
+                    JmriJOptionPane.WARNING_MESSAGE);
         }
     }
 
@@ -305,7 +305,7 @@ public class DefaultLogixNGManager extends AbstractManager<LogixNG>
             for (GlobalVariable gv : globalVariables) {
                 try {
                     gv.initialize();
-                } catch (JmriException e) {
+                } catch (JmriException | IllegalArgumentException e) {
                     log.warn("Variable {} could not be initialized", gv.getUserName(), e);
                 }
             }
@@ -321,7 +321,7 @@ public class DefaultLogixNGManager extends AbstractManager<LogixNG>
                 logixNG.activate();
                 if (logixNG.isActive()) {
                     logixNG.registerListeners();
-                    logixNG.execute(false);
+                    logixNG.execute(false, true);
                     activeLogixNGs.add(logixNG);
                 } else {
                     logixNG.unregisterListeners();
@@ -338,10 +338,15 @@ public class DefaultLogixNGManager extends AbstractManager<LogixNG>
 
                 if (logixNG.isActive()) {
                     logixNG.registerListeners();
-                    logixNG.execute();
+                    logixNG.execute(true, true);
                 } else {
                     logixNG.unregisterListeners();
                 }
+            });
+
+            // Clear the startup flag of the LogixNGs.
+            _tsys.values().stream().forEach((logixNG) -> {
+                logixNG.clearStartup();
             });
         };
 

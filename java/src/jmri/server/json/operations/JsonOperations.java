@@ -48,13 +48,29 @@ public class JsonOperations {
      */
     public static final String LOCATION_NAME = "locationName"; // NOI18N
     /**
+     * {@value #LOCATION_UNKNOWN}
+     */
+    public static final String LOCATION_UNKNOWN = "locationUnknown"; // NOI18N
+    /**
+     * {@value #TRAIN_ID}
+     */
+    public static final String TRAIN_ID = "trainId"; // NOI18N
+    /**
+     * {@value #TRAIN_NAME}
+     */
+    public static final String TRAIN_NAME = "trainName"; // NOI18N
+    /**
+     * {@value #TRAIN_ICON_NAME}
+     */
+    public static final String TRAIN_ICON_NAME = "trainIconName"; // NOI18N
+    /**
      * {@value #TRAIN}
      */
     public static final String TRAIN = "train"; // NOI18N
     /**
      * {@value #WEIGHT}
      * <p>
-     * Used for actual weight of rolling stock in onces or a train's weight in tons
+     * Used for actual weight of rolling stock in ounces or a train's weight in tons
      */
     public static final String WEIGHT = "weight"; // NOI18N
     /**
@@ -139,6 +155,10 @@ public class JsonOperations {
      * {@value #OUT_OF_SERVICE}
      */
     public static final String OUT_OF_SERVICE = "outOfService"; // NOI18N
+    /**
+     * {@value #NULL}
+     */
+    public static final String NULL = "null"; // NOI18N
 
     /**
      * Prevent instantiation, since this class only contains static values

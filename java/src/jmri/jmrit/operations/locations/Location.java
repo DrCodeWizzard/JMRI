@@ -2,7 +2,6 @@ package jmri.jmrit.operations.locations;
 
 import java.awt.Point;
 import java.beans.PropertyChangeListener;
-import java.text.MessageFormat;
 import java.util.*;
 
 import javax.swing.JComboBox;
@@ -16,6 +15,7 @@ import jmri.InstanceManager;
 import jmri.Reporter;
 import jmri.beans.Identifiable;
 import jmri.beans.PropertyChangeSupport;
+import jmri.jmrit.operations.OperationsPanel;
 import jmri.jmrit.operations.locations.divisions.Division;
 import jmri.jmrit.operations.locations.divisions.DivisionManager;
 import jmri.jmrit.operations.rollingstock.RollingStock;
@@ -151,6 +151,10 @@ public class Location extends PropertyChangeSupport implements Identifiable, Pro
 
     public String getName() {
         return _name;
+    }
+    
+    public String getSplitName() {
+        return TrainCommon.splitString(getName());
     }
 
     /**
@@ -1067,6 +1071,7 @@ public class Location extends PropertyChangeSupport implements Identifiable, Pro
         for (Track track : tracks) {
             box.addItem(track);
         }
+        OperationsPanel.padComboBox(box, InstanceManager.getDefault(LocationManager.class).getMaxTrackNameLength());
     }
 
     /**
@@ -1206,7 +1211,7 @@ public class Location extends PropertyChangeSupport implements Identifiable, Pro
     public boolean hasPlannedPickups() {
         List<Track> tracks = getTracksList();
         for (Track track : tracks) {
-            if (track.getIgnoreUsedLengthPercentage() > 0) {
+            if (track.getIgnoreUsedLengthPercentage() > Track.IGNORE_0) {
                 return true;
             }
         }
@@ -1305,6 +1310,34 @@ public class Location extends PropertyChangeSupport implements Identifiable, Pro
     public boolean hasWork() {
         return (getDropRS() != 0 || getPickupRS() != 0);
     }
+    
+    public boolean hasDisableLoadChange() {
+        for (Track track : getTracksList()) {
+            if (track.isSpur() && track.isDisableLoadChangeEnabled()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    public boolean hasTracksWithRestrictedTrainDirections() {
+        int trainDirections = getTrainDirections() & Setup.getTrainDirection();
+        for (Track track : getTracksList()) {
+            if (trainDirections != (track.getTrainDirections() & trainDirections)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean hasTrackMessages() {
+        for (Track track : getTracksList()) {
+            if (track.hasMessages()) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public boolean hasReporters() {
         for (Track track : getTracksList()) {
@@ -1353,7 +1386,7 @@ public class Location extends PropertyChangeSupport implements Identifiable, Pro
         InstanceManager.getDefault(CarRoads.class).removePropertyChangeListener(this);
         InstanceManager.getDefault(EngineTypes.class).removePropertyChangeListener(this);
         // Change name in case object is still in use, for example Schedules
-        setName(MessageFormat.format(Bundle.getMessage("NotValid"), new Object[]{getName()}));
+        setName(Bundle.getMessage("NotValid", getName()));
         setDirtyAndFirePropertyChange(DISPOSE_CHANGED_PROPERTY, null, DISPOSE_CHANGED_PROPERTY);
     }
 

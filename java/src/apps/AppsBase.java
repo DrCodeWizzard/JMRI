@@ -34,7 +34,7 @@ import apps.util.Log4JUtil;
  * There are a series of steps in the configuration:
  * <dl>
  * <dt>preInit<dd>Initialize log4j, invoked from the main()
- * <dt>ctor<dd>
+ * <dt>ctor<dd>Construct the basic application object
  * </dl>
  *
  * @author Bob Jacobsen Copyright 2009, 2010
@@ -198,7 +198,8 @@ public abstract class AppsBase {
 
     protected void installManagers() {
         // record startup
-        InstanceManager.getDefault(FileHistory.class).addOperation("app", Application.getApplicationName(), null);
+        String appString = String.format("%s (v%s)", Application.getApplicationName(), Version.getCanonicalVersion());
+        InstanceManager.getDefault(FileHistory.class).addOperation("app", appString, null);
 
         // install the abstract action model that allows items to be added to the, both
         // CreateButton and Perform Action Model use a common Abstract class

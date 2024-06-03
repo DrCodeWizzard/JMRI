@@ -157,7 +157,17 @@ public class JsonUtil {
         } else {
             data.set(JSON.RETURN_WHEN_EMPTY, null);
         }
-        data.put(JSON.STATUS, car.getStatus());
+        if (car.getReturnWhenLoadedDestTrack() != null) {
+            data.set(JSON.RETURN_WHEN_LOADED,
+                    this.getRSLocationAndTrack(car.getReturnWhenLoadedDestTrack(), null, locale));
+        } else if (car.getReturnWhenLoadedDestination() != null) {
+            data.set(JSON.RETURN_WHEN_LOADED,
+                    this.getRSLocation(car.getReturnWhenLoadedDestination(), (RouteLocation) null, locale));
+        } else {
+            data.set(JSON.RETURN_WHEN_LOADED, null);
+        }
+        data.put(JSON.DIVISION, car.getDivisionName());
+        data.put(JSON.STATUS, car.getStatus().replace("<", "&lt;").replace(">", "&gt;"));
         return data;
     }
 
@@ -176,7 +186,7 @@ public class JsonUtil {
         data.put(JSON.USERNAME, location.getName());
         data.put(JSON.NAME, location.getId());
         data.put(JSON.LENGTH, location.getLength());
-        data.put(JSON.COMMENT, location.getComment());
+        data.put(JSON.COMMENT, location.getCommentWithColor());
         Reporter reporter = location.getReporter();
         data.put(REPORTER, reporter != null ? reporter.getSystemName() : "");
         // note type defaults to all in-use rolling stock types
@@ -297,6 +307,17 @@ public class JsonUtil {
         // second half of string can be anything
         String[] type = rs.getTypeName().split(TrainCommon.HYPHEN, 2);
         node.put(JSON.RFID, rs.getRfid());
+        if (!rs.getWhereLastSeenName().equals(Car.NONE)) {
+            node.put(JSON.WHERELASTSEEN, rs.getWhereLastSeenName() +
+                    (rs.getTrackLastSeenName().equals(Car.NONE) ? "" : " (" + rs.getTrackLastSeenName() + ")"));
+        } else {
+            node.set(JSON.WHERELASTSEEN, null);        
+        }
+        if (!rs.getWhenLastSeenDate().equals(Car.NONE)) {
+            node.put(JSON.WHENLASTSEEN, rs.getWhenLastSeenDate());
+        } else {
+            node.set(JSON.WHENLASTSEEN, null);            
+        }
         node.put(JsonOperations.CAR_TYPE, type[0]);
         node.put(JsonOperations.CAR_SUB_TYPE, type.length == 2 ? type[1] : "");
         node.put(JSON.LENGTH, rs.getLengthInteger());
@@ -315,6 +336,7 @@ public class JsonUtil {
         node.put(JsonOperations.BUILT, rs.getBuilt());
         node.put(JSON.COMMENT, rs.getComment());
         node.put(JsonOperations.OUT_OF_SERVICE, rs.isOutOfService());
+        node.put(JsonOperations.LOCATION_UNKNOWN, rs.isLocationUnknown());
         if (rs.getTrack() != null) {
             node.set(JsonOperations.LOCATION, this.getRSLocationAndTrack(rs.getTrack(), rs.getRouteLocation(), locale));
         } else if (rs.getLocation() != null) {
@@ -322,6 +344,15 @@ public class JsonUtil {
         } else {
             node.set(JsonOperations.LOCATION, null);
         }
+        if (rs.getTrain() != null) {
+            node.put(JsonOperations.TRAIN_ID, rs.getTrain().getId());
+            node.put(JsonOperations.TRAIN_NAME, rs.getTrain().getName());
+            node.put(JsonOperations.TRAIN_ICON_NAME, rs.getTrain().getIconName());
+        } else {
+            node.set(JsonOperations.TRAIN_ID, null);
+            node.set(JsonOperations.TRAIN_NAME, null);
+            node.set(JsonOperations.TRAIN_ICON_NAME, null);
+        }  
         if (rs.getDestinationTrack() != null) {
             node.set(JsonOperations.DESTINATION,
                     this.getRSLocationAndTrack(rs.getDestinationTrack(), rs.getRouteDestination(), locale));
@@ -429,7 +460,7 @@ public class JsonUtil {
             root.put(JSON.NAME, rl.getId());
             root.put(JSON.USERNAME, rl.getName());
             root.put(JSON.TRAIN_DIRECTION, rl.getTrainDirectionString());
-            root.put(JSON.COMMENT, rl.getComment());
+            root.put(JSON.COMMENT, rl.getCommentWithColor());
             root.put(JSON.SEQUENCE, rl.getSequenceNumber());
             root.put(JSON.EXPECTED_ARRIVAL, train.getExpectedArrivalTime(rl));
             root.put(JSON.EXPECTED_DEPARTURE, train.getExpectedDepartureTime(rl));

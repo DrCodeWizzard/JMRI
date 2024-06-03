@@ -13,6 +13,8 @@ import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyVetoException;
 import java.util.Objects;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -54,6 +56,7 @@ public class PositionableLabel extends JLabel implements Positionable {
     protected Editor _editor;
 
     private String _id;            // user's Id or null if no Id
+    private final Set<String> _classes = new HashSet<>(); // user's classes
 
     protected boolean _icon = false;
     protected boolean _text = false;
@@ -67,6 +70,8 @@ public class PositionableLabel extends JLabel implements Positionable {
     protected boolean _viewCoordinates = true;
     protected boolean _controlling = true;
     protected boolean _hidden = false;
+    protected boolean _emptyHidden = false;
+    protected boolean _valueEditDisabled = false;
     protected int _displayLevel;
 
     protected String _unRotatedText;
@@ -113,6 +118,35 @@ public class PositionableLabel extends JLabel implements Positionable {
     @Override
     public String getId() {
         return _id;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void addClass(String className) {
+        _editor.positionalAddClass(this, className);
+        _classes.add(className);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void removeClass(String className) {
+        _editor.positionalRemoveClass(this, className);
+        _classes.remove(className);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void removeAllClasses() {
+        for (String className : _classes) {
+            _editor.positionalRemoveClass(this, className);
+        }
+        _classes.clear();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public Set<String> getClasses() {
+        return java.util.Collections.unmodifiableSet(_classes);
     }
 
     public final boolean isIcon() {
@@ -201,6 +235,26 @@ public class PositionableLabel extends JLabel implements Positionable {
         }
     }
 
+    @Override
+    public void setEmptyHidden(boolean hide) {
+        _emptyHidden = hide;
+    }
+
+    @Override
+    public boolean isEmptyHidden() {
+        return _emptyHidden;
+    }
+
+    @Override
+    public void setValueEditDisabled(boolean isDisabled) {
+        _valueEditDisabled = isDisabled;
+    }
+
+    @Override
+    public boolean isValueEditDisabled() {
+        return _valueEditDisabled;
+    }
+
     /**
      * Delayed setDisplayLevel for DnD.
      *
@@ -243,6 +297,12 @@ public class PositionableLabel extends JLabel implements Positionable {
     @Override
     public ToolTip getToolTip() {
         return _tooltip;
+    }
+
+    @Override
+    @Nonnull
+    public String getTypeString() {
+        return Bundle.getMessage("PositionableType_PositionableLabel");
     }
 
     @Override
@@ -1142,6 +1202,19 @@ public class PositionableLabel extends JLabel implements Positionable {
 
     @Override
     public void setText(String text) {
+        if (this instanceof BlockContentsIcon || this instanceof MemoryIcon || this instanceof GlobalVariableIcon) {
+            if (_editor != null && !_editor.isEditable()) {
+                if (isEmptyHidden()) {
+                    log.debug("label setText: {} :: {}", text, getNameString());
+                    if (text == null || text.isEmpty()) {
+                        setVisible(false);
+                    } else {
+                        setVisible(true);
+                    }
+                }
+            }
+        }
+
         _unRotatedText = text;
         _text = (text != null && text.length() > 0);  // when "" is entered for text, and a font has been specified, the descender distance moves the position
         if (/*_rotateText &&*/!isIcon() && (_namedIcon != null || _degrees != 0)) {

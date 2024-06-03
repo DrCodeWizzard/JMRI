@@ -11,9 +11,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.swing.*;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import jmri.InstanceManager;
 import jmri.jmrit.operations.locations.Location;
 import jmri.jmrit.operations.locations.Track;
@@ -25,6 +22,7 @@ import jmri.jmrit.operations.routes.RouteLocation;
 import jmri.jmrit.operations.setup.Control;
 import jmri.jmrit.operations.setup.Setup;
 import jmri.jmrit.operations.trains.*;
+import jmri.util.swing.JmriJOptionPane;
 
 /**
  * Common elements for the Conductor and Yardmaster Frames.
@@ -265,9 +263,9 @@ public abstract class CommonConductorYardmasterPanel extends OperationsPanel imp
     }
 
     private void addCarToTrain() {
-        if (JOptionPane.showConfirmDialog(this,
-                MessageFormat.format(Bundle.getMessage("WantAddCarsToTrain?"), new Object[] { _train.getName() }),
-                Bundle.getMessage("AddCarsToTrain?"), JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+        if (JmriJOptionPane.showConfirmDialog(this,
+                Bundle.getMessage("WantAddCarsToTrain?", _train.getName()),
+                Bundle.getMessage("AddCarsToTrain?"), JmriJOptionPane.YES_NO_OPTION) == JmriJOptionPane.YES_OPTION) {
             new CarsTableFrame(false, _train.getCurrentRouteLocation().getName(), null);
         }
     }
@@ -549,14 +547,23 @@ public abstract class CommonConductorYardmasterPanel extends OperationsPanel imp
         List<Track> tracks = rl.getLocation().getTracksByNameList(null);
         List<RouteLocation> routeList = _train.getRoute().getBlockingOrder();
         List<Car> carList = carManager.getByTrainDestinationList(_train);
+        List<Car> carsDone = new ArrayList<>();
         for (Track track : tracks) {
             for (RouteLocation rld : routeList) {
                 for (Car car : carList) {
+                    if (carsDone.contains(car)) {
+                        continue;
+                    }
                     // note that a car in train doesn't have a track assignment
                     if (car.getTrack() == null) {
                         continue;
                     }
+                    // do local move later
                     if (car.isLocalMove() && rl == rld) {
+                        continue;
+                    }
+                    if (Setup.isSortByTrackNameEnabled() &&
+                            !car.getTrack().getSplitName().equals(track.getSplitName())) {
                         continue;
                     }
                     // determine if car is a pick up from the right track
@@ -590,8 +597,7 @@ public abstract class CommonConductorYardmasterPanel extends OperationsPanel imp
                                 text = trainCommon.pickupUtilityCars(carList, car, isManifest,
                                         !TrainCommon.IS_TWO_COLUMN_TRACK);
                                 if (text == null) {
-                                    continue; // this car type has already been
-                                              // processed
+                                    continue; // this car type has already been processed
                                 }
                             } else {
                                 text = trainCommon.pickupCar(car, isManifest, !TrainCommon.IS_TWO_COLUMN_TRACK);
@@ -602,11 +608,15 @@ public abstract class CommonConductorYardmasterPanel extends OperationsPanel imp
                             pPickups.add(checkBox);
                             checkBoxes.put("p" + car.getId(), checkBox);
                         }
+                        carsDone.add(car);
                     }
                 }
             }
             // set outs and local moves
             for (Car car : carList) {
+                if (carsDone.contains(car)) {
+                    continue;
+                }
                 if (car.getRouteDestination() != rl || car.getDestinationTrack() == null) {
                     continue;
                 }
@@ -649,7 +659,8 @@ public abstract class CommonConductorYardmasterPanel extends OperationsPanel imp
                     // local move?
                 } else if (car.getTrack() != null &&
                         car.getRouteLocation() == rl &&
-                        (!Setup.isSortByTrackNameEnabled() || car.getTrack().getName().equals(track.getName()))) {
+                        (!Setup.isSortByTrackNameEnabled() ||
+                                car.getTrack().getSplitName().equals(track.getSplitName()))) {
                     movePane.setVisible(true);
                     if (!rollingStock.contains(car)) {
                         rollingStock.add(car);
@@ -678,6 +689,7 @@ public abstract class CommonConductorYardmasterPanel extends OperationsPanel imp
                         pMoves.add(checkBox);
                         checkBoxes.put("m" + car.getId(), checkBox);
                     }
+                    carsDone.add(car);
                 }
             }
             // if not sorting by track, we're done
@@ -759,7 +771,7 @@ public abstract class CommonConductorYardmasterPanel extends OperationsPanel imp
                 text = TrainSwitchListText.getStringTrainDepartsLoads();
             }
             return MessageFormat.format(text,
-                    new Object[] { TrainCommon.splitString(rl.getName()), rl.getTrainDirectionString(),
+                    new Object[] { rl.getSplitName(), rl.getTrainDirectionString(),
                             _train.getNumberCarsInTrain(rl) - emptyCars, emptyCars, _train.getTrainLength(rl),
                             Setup.getLengthUnit().toLowerCase(), _train.getTrainWeight(rl),
                             _train.getTrainTerminatesName(), _train.getName() });
@@ -771,7 +783,7 @@ public abstract class CommonConductorYardmasterPanel extends OperationsPanel imp
                 text = TrainSwitchListText.getStringTrainDepartsCars();
             }
             return MessageFormat.format(text,
-                    new Object[] { TrainCommon.splitString(rl.getName()), rl.getTrainDirectionString(),
+                    new Object[] { rl.getSplitName(), rl.getTrainDirectionString(),
                             _train.getNumberCarsInTrain(rl), _train.getTrainLength(rl),
                             Setup.getLengthUnit().toLowerCase(), _train.getTrainWeight(rl),
                             _train.getTrainTerminatesName(), _train.getName() });
@@ -817,5 +829,5 @@ public abstract class CommonConductorYardmasterPanel extends OperationsPanel imp
                 e.getNewValue()); // NOI18N
     }
 
-    private static final Logger log = LoggerFactory.getLogger(CommonConductorYardmasterPanel.class);
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CommonConductorYardmasterPanel.class);
 }

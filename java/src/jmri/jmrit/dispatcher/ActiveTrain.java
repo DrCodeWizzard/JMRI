@@ -16,6 +16,8 @@ import jmri.Section;
 import jmri.Sensor;
 import jmri.Transit;
 import jmri.beans.PropertyChangeProvider;
+import jmri.jmrit.display.layoutEditor.LayoutBlock;
+import jmri.jmrit.display.layoutEditor.LayoutBlockManager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,7 +108,6 @@ import org.slf4j.LoggerFactory;
  * JMRI is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
  * A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- * <p>
  *
  * @author Dave Duchamp Copyright (C) 2008-2011
  */
@@ -177,6 +178,15 @@ public class ActiveTrain implements PropertyChangeProvider {
      */
     public static final int ALLOCATE_BY_SAFE_SECTIONS = 0;
 
+    /**
+     * How much of the train can be detected
+     */
+    public enum TrainDetection {
+        TRAINDETECTION_WHOLETRAIN,
+        TRAINDETECTION_HEADONLY,
+        TRAINDETECTION_HEADANDTAIL
+    }
+
     // instance variables
     private Transit mTransit = null;
     private String mTrainName = "";
@@ -189,6 +199,7 @@ public class ActiveTrain implements PropertyChangeProvider {
     private AutoActiveTrain mAutoActiveTrain = null;
     private final List<AllocatedSection> mAllocatedSections = new ArrayList<>();
     private jmri.Section mLastAllocatedSection = null;
+    private Section mLastAllocOverrideSafe = null;
     private int mLastAllocatedSectionSeqNumber = 0;
     private jmri.Section mSecondAllocatedSection = null;
     private int mNextAllocationNumber = 1;
@@ -209,6 +220,7 @@ public class ActiveTrain implements PropertyChangeProvider {
     public final static int NODELAY = 0x00;
     public final static int TIMEDDELAY = 0x01;
     public final static int SENSORDELAY = 0x02;
+    private TrainDetection trainDetection = TrainDetection.TRAINDETECTION_HEADONLY;
 
     private int mDelayedRestart = NODELAY;
     private int mDelayedStart = NODELAY;
@@ -304,6 +316,11 @@ public class ActiveTrain implements PropertyChangeProvider {
             log.error("Invalid ActiveTrain status - {}", status);
         }
     }
+
+    public void setControlingSignal(Object oldSignal, Object newSignal) {
+        firePropertyChange("signal", oldSignal, newSignal);
+    }
+
     public String getStatusText() {
         if (mStatus == RUNNING) {
             return Bundle.getMessage("RUNNING");
@@ -335,6 +352,22 @@ public class ActiveTrain implements PropertyChangeProvider {
             return Bundle.getMessage("DONE");
         }
         return ("");
+    }
+
+    /**
+     * sets the train detection type
+     * @param value {@link ActiveTrain.TrainDetection}
+     */
+    public void setTrainDetection(TrainDetection value) {
+        trainDetection = value;
+    }
+
+    /**
+     * Gets the train detection type
+     * @return {@link ActiveTrain.TrainDetection}
+     */
+    public TrainDetection getTrainDetection() {
+        return trainDetection;
     }
 
     public boolean isTransitReversed() {
@@ -666,6 +699,16 @@ public class ActiveTrain implements PropertyChangeProvider {
     public int getMode() {
         return mMode;
     }
+    
+    public void forcePassNextSafeSection() {
+        for (AllocatedSection as: mAllocatedSections) {
+            if (as.getTransitSection().getSection() == mLastAllocatedSection 
+                    && as.getTransitSection().isSafe() 
+                    && as.getNextSection().getOccupancy() == Section.UNOCCUPIED) {
+                mLastAllocOverrideSafe = mLastAllocatedSection;
+            }
+        }
+    }
 
     public void setMode(int mode) {
         if ((mode == AUTOMATIC) || (mode == MANUAL)
@@ -729,6 +772,7 @@ public class ActiveTrain implements PropertyChangeProvider {
             if (as.getSection() == mNextSectionToAllocate) {
                 // this  is the next Section in the Transit, update pointers
                 mLastAllocatedSection = as.getSection();
+                mLastAllocOverrideSafe = null;
                 mLastAllocatedSectionSeqNumber = mNextSectionSeqNumber;
                 mNextSectionToAllocate = as.getNextSection();
                 mNextSectionSeqNumber = as.getNextSectionSequence();
@@ -792,10 +836,23 @@ public class ActiveTrain implements PropertyChangeProvider {
             as.getSection().clearNameInUnoccupiedBlocks();
             as.getSection().suppressNameUpdate(false);
         }
-        as.getSection().setAlternateColor(false);
+        for (Block b: as.getSection().getBlockList()) {
+            if (!InstanceManager.getDefault(DispatcherFrame.class).checkForBlockInAllocatedSection(b, as.getSection())) {
+                String userName = b.getUserName();
+                if (userName != null) {
+                    LayoutBlock lb = InstanceManager.getDefault(LayoutBlockManager.class).getByUserName(userName);
+                    if (lb != null) {
+                        lb.setUseExtraColor(false);
+                    }
+                }
+            }
+        }
+        // notify anyone interested
+        pcs.firePropertyChange("sectiondeallocated",as , null);
         refreshPanel();
         if (as.getSection() == mLastAllocatedSection) {
             mLastAllocatedSection = null;
+            mLastAllocOverrideSafe = null;
             if (mAllocatedSections.size() > 0) {
                 mLastAllocatedSection = mAllocatedSections.get(
                         mAllocatedSections.size() - 1).getSection();
@@ -828,7 +885,7 @@ public class ActiveTrain implements PropertyChangeProvider {
         resetAllAllocatedSections();
         clearAllocations();
         setAllocationReversed(false);
-        // wait for autoallocate to do its stuffbefore continuing
+        // wait for AutoAllocate to do complete.
         InstanceManager.getDefault(DispatcherFrame.class).queueWaitForEmpty();
         if (mAutoRun) {
             mAutoActiveTrain.allocateAFresh();
@@ -924,6 +981,10 @@ public class ActiveTrain implements PropertyChangeProvider {
 
     public jmri.Section getLastAllocatedSection() {
         return mLastAllocatedSection;
+    }
+
+    public Section getLastAllocOverrideSafe() {
+        return mLastAllocOverrideSafe;
     }
 
     public int getLastAllocatedSectionSeqNumber() {

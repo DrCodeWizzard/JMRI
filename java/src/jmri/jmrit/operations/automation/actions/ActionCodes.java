@@ -17,7 +17,7 @@ public class ActionCodes {
     
     public static final int ENABLE_AUTOMATION = 0x10;
     public static final int ENABLE_GOTO = 0x20;
-    public static final int ENABLE_OTHER = 0x40;
+    public static final int ENABLE_OTHER = 0x40; // not used, for backwards compatibility
 
     // codes use upper byte   
     public static final int CODE_MASK = 0xFF00; // upper byte only
@@ -57,10 +57,8 @@ public class ActionCodes {
     public static final int STOP_AUTOMATION = 0x3200 + OK_MESSAGE + FAIL_MESSAGE + ENABLE_AUTOMATION;
     public static final int RESUME_AUTOMATION = 0x3300 + OK_MESSAGE + FAIL_MESSAGE + ENABLE_AUTOMATION;
     
-//    public static final int MESSAGE = 0x4000  + ENABLE_TRAINS + ENABLE_ROUTES + OK_MESSAGE;
-//    public static final int MESSAGE_OK = 0x4100 + ENABLE_TRAINS + ENABLE_ROUTES + OK_MESSAGE;
+    public static final int COUNTER = 0x4000 + OK_MESSAGE;
     public static final int MESSAGE_YES_NO = 0x4200 + ENABLE_TRAINS + ENABLE_ROUTES + OK_MESSAGE;
-//    public static final int IF_MESSAGE_NO = 0x4300 + OK_MESSAGE + ENABLE_GOTO_LIST;
     
     public static final int GOTO = 0x5000 + OK_MESSAGE + FAIL_MESSAGE + ENABLE_GOTO;
     public static final int GOTO_IF_TRUE = 0x5100 + OK_MESSAGE + FAIL_MESSAGE + ENABLE_GOTO;

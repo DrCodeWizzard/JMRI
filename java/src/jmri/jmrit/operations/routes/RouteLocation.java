@@ -84,10 +84,7 @@ public class RouteLocation extends PropertyChangeSupport implements java.beans.P
     // for combo boxes
     @Override
     public String toString() {
-        if (_location != null) {
-            return _location.getName();
-        }
-        return DELETED;
+        return getName();
     }
 
     public String getId() {
@@ -95,8 +92,15 @@ public class RouteLocation extends PropertyChangeSupport implements java.beans.P
     }
 
     public String getName() {
-        if (_location != null) {
-            return _location.getName();
+        if (getLocation() != null) {
+            return getLocation().getName();
+        }
+        return DELETED;
+    }
+    
+    public String getSplitName() {
+        if (getLocation() != null) {
+            return getLocation().getSplitName();
         }
         return DELETED;
     }
@@ -157,7 +161,7 @@ public class RouteLocation extends PropertyChangeSupport implements java.beans.P
         return _commentColor;
     }
 
-    public String getFormatedColorComment() {
+    public String getCommentWithColor() {
         return TrainCommon.formatColorString(getComment(), getCommentColor());
     }
 

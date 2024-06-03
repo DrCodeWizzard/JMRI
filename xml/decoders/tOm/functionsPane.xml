@@ -12,6 +12,8 @@
 <!-- for more details.                                                      -->
 
 <!-- Version 1 - Lolke H Bijlsma - Introduction Lokommander II              -->
+<!-- Version 2 - Lolke H Bijlsma (2023-09-15) - Function selection updated  -->
+<!-- Version 3 - Lolke H Bijlsma (2024-04-22) - Correct implementation      -->
 
   <pane xmlns:xi="http://www.w3.org/2001/XInclude" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://jmri.org/xml/schema/programmer.xsd">
     <name>tOm Function Map</name>
@@ -27,7 +29,7 @@
       </label>
       <label>
         <text>enables Shunting Speed</text>
-        <text xml:lang="cs">povolí posunovací rychlost.</text>
+        <text xml:lang="cs">povolí posunovací rychlost</text>
       </label>
       <label>
         <text> </text>
@@ -53,7 +55,7 @@
       </label>
       <label>
         <text>switches off Acceleration, Deceleration</text>
-        <text xml:lang="cs">vypne Zrychlování a Zpomalování.</text>
+        <text xml:lang="cs">vypne Zrychlení a Zpomalení</text>
       </label>
       <label>
         <text> </text>
@@ -79,7 +81,7 @@
       </label>
       <label>
         <text>disables Constant Braking Distance</text>
-        <text xml:lang="cs">zakáže konstantní brzdnou dráhu CBD.</text>
+        <text xml:lang="cs">zakáže Konstantní brzdnou vzdálenost</text>
       </label>
       <label>
         <text> </text>
@@ -93,6 +95,5 @@
       <display item="Disable Constant Braking Distance For F7" format="checkbox" />
       <display item="Disable Constant Braking Distance For F8" format="checkbox" />
     </column>
-
-
+    
   </pane>

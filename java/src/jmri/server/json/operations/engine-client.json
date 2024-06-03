@@ -38,6 +38,27 @@
             ],
             "description": "The name of the consist the engine is in"
         },
+        "trainId": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "null to remove engine from its train"
+        },
+        "trainName": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "name of train engine is assigned to, null if not assigned"
+        },
+        "trainIconName": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "icon name of train engine is assigned to, null if not assigned"
+        },
         "destination": {
             "type": [
                 "object",
@@ -64,6 +85,10 @@
             "type": "boolean",
             "description": "True if out of service; false otherwise"
         },
+        "locationUnknown": {
+            "type": "boolean",
+            "description": "True if car is lost, false otherwise"
+        },
         "owner": {
             "type": "string",
             "description": "The engine owner"
@@ -74,6 +99,20 @@
                 "null"
             ],
             "description": "RFID tag attached to car; null if none"
+        },
+        "whereLastSeen": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "The location of the last reported sighting of the tag"
+        },
+        "whenLastSeen": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "The timestamp of the last reported sighting of the tag"
         },
         "carType": {
             "type": "string",

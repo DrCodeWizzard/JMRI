@@ -4,12 +4,10 @@ import java.awt.GridBagLayout;
 
 import javax.swing.*;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import jmri.InstanceManager;
 import jmri.jmrit.operations.locations.LocationManager;
 import jmri.jmrit.operations.trains.TrainManager;
+import jmri.util.swing.JmriJOptionPane;
 
 /**
  * Frame for user edit of setup options
@@ -128,13 +126,13 @@ public class OptionPanel extends OperationsPreferencesPanel {
 
         addItem(pOpt, buildNormal, 1, 0);
         addItem(pOpt, buildAggressive, 2, 0);
-        addItem(pBuild, pOpt, 1, 0);
+        pBuild.add(pOpt);
 
         JPanel pPasses = new JPanel();
         pPasses.setLayout(new GridBagLayout());
         pPasses.setBorder(BorderFactory.createTitledBorder(Bundle.getMessage("BorderLayoutNumberPasses")));
         addItem(pPasses, numberPassesComboBox, 0, 0);
-        addItem(pBuild, pPasses, 1, 1);
+        pBuild.add(pPasses);
 
         // Switcher Service
         JPanel pSwitcher = new JPanel();
@@ -144,7 +142,6 @@ public class OptionPanel extends OperationsPreferencesPanel {
         addItemLeft(pSwitcher, localInterchangeCheckBox, 1, 1);
         addItemLeft(pSwitcher, localSpurCheckBox, 1, 2);
         addItemLeft(pSwitcher, localYardCheckBox, 1, 3);
-        addItemLeft(pBuild, pSwitcher, 1, 2);
 
         // Staging
         JPanel pStaging = new JPanel();
@@ -157,7 +154,6 @@ public class OptionPanel extends OperationsPreferencesPanel {
         addItemLeft(pStaging, promptFromTrackStagingCheckBox, 1, 7);
         addItemLeft(pStaging, promptToTrackStagingCheckBox, 1, 8);
         addItemLeft(pStaging, tryNormalStagingCheckBox, 1, 9);
-        addItemLeft(pBuild, pStaging, 1, 3);
 
         // Router panel
         JPanel pRouter = new JPanel();
@@ -201,6 +197,8 @@ public class OptionPanel extends OperationsPreferencesPanel {
         addItem(pControl, saveButton, 3, 9);
 
         panel.add(pBuild);
+        panel.add(pSwitcher);
+        panel.add(pStaging);
         panel.add(pRouter);
         panel.add(pLogger);
         panel.add(pCustom);
@@ -246,8 +244,8 @@ public class OptionPanel extends OperationsPreferencesPanel {
         // can't change the build option if there are trains built
         if (InstanceManager.getDefault(TrainManager.class).isAnyTrainBuilt()) {
             setBuildOption(); // restore the correct setting
-            JOptionPane.showMessageDialog(this, Bundle.getMessage("CanNotChangeBuild"),
-                    Bundle.getMessage("MustTerminateOrReset"), JOptionPane.ERROR_MESSAGE);
+            JmriJOptionPane.showMessageDialog(this, Bundle.getMessage("CanNotChangeBuild"),
+                    Bundle.getMessage("MustTerminateOrReset"), JmriJOptionPane.ERROR_MESSAGE);
         }
         enableComponents();
         // Special case where there are train build failures that created work.
@@ -263,8 +261,9 @@ public class OptionPanel extends OperationsPreferencesPanel {
     public void buttonActionPerformed(java.awt.event.ActionEvent ae) {
         if (ae.getSource() == saveButton) {
             this.savePreferences();
-            if (Setup.isCloseWindowOnSaveEnabled()) {
-                dispose();
+            var topLevelAncestor = getTopLevelAncestor();
+            if (Setup.isCloseWindowOnSaveEnabled() && topLevelAncestor instanceof OptionFrame) {
+                ((OptionFrame) topLevelAncestor).dispose();
             }
         }
     }
@@ -275,8 +274,8 @@ public class OptionPanel extends OperationsPreferencesPanel {
             setRouterCheckBoxesEnabled();
         }
         if (ae.getSource() == routerRestrictBox && routerRestrictBox.isSelected()) {
-            JOptionPane.showMessageDialog(this, Bundle.getMessage("WarnExtremeTrackDest"),
-                    Bundle.getMessage("WarnExtremeTitle"), JOptionPane.WARNING_MESSAGE);
+            JmriJOptionPane.showMessageDialog(this, Bundle.getMessage("WarnExtremeTrackDest"),
+                    Bundle.getMessage("WarnExtremeTitle"), JmriJOptionPane.WARNING_MESSAGE);
         }
     }
 
@@ -286,8 +285,6 @@ public class OptionPanel extends OperationsPreferencesPanel {
         routerAllTrainsBox.setEnabled(routerCheckBox.isSelected());
         routerRestrictBox.setEnabled(routerCheckBox.isSelected());
     }
-
-    private static final Logger log = LoggerFactory.getLogger(OptionPanel.class);
 
     @Override
     public String getTabbedPreferencesTitle() {
@@ -382,4 +379,7 @@ public class OptionPanel extends OperationsPreferencesPanel {
                 &&
                 Setup.isVsdPhysicalLocationEnabled() == enableVsdCheckBox.isSelected());
     }
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(OptionPanel.class);
+
 }

@@ -1,16 +1,13 @@
 package jmri.jmrit.throttle;
 
-import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.Dimension;
-import javax.swing.BorderFactory;
-import javax.swing.ImageIcon;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JProgressBar;
-import javax.swing.JTable;
+import java.awt.*;
+
+import javax.swing.*;
 import javax.swing.border.BevelBorder;
 import javax.swing.table.TableCellRenderer;
+
+import jmri.Consist;
+import jmri.DccLocoAddress;
 import jmri.InstanceManager;
 import jmri.Throttle;
 import jmri.jmrit.roster.RosterIconFactory;
@@ -42,41 +39,79 @@ public class ThrottlesTableCellRenderer implements TableCellRenderer {
         }
 
         ThrottleFrame tf = (ThrottleFrame) value;
-        ImageIcon icon = null;
-        String text;
-        if (tf.getRosterEntry() != null) {
-            icon = ICN_FACT.getIcon(tf.getAddressPanel().getRosterEntry());
-            text = tf.getAddressPanel().getRosterEntry().getId();
-        } else if ((tf.getAddressPanel().getCurrentAddress() != null) && (tf.getAddressPanel().getThrottle() != null)) {
-            switch (tf.getAddressPanel().getCurrentAddress().getNumber()) {
-                case 0:
-                    text = Bundle.getMessage("ThrottleDCControl") + " - " + tf.getAddressPanel().getCurrentAddress();
-                    break;
-                case 3:
-                    text = Bundle.getMessage("ThrottleDCCControl") + " - " + tf.getAddressPanel().getCurrentAddress();
-                    break;
-                default:
-                    text = Bundle.getMessage("ThrottleAddress") + " " + tf.getAddressPanel().getCurrentAddress();
-                    break;
+        // loco icon
+        if ((tf.getAddressPanel().getConsistAddress() != null) && (tf.getAddressPanel().getThrottle() != null)) {
+            // consists
+            JPanel consistPanel = new JPanel();
+            consistPanel.setLayout(new FlowLayout());
+            consistPanel.setOpaque(false);
+            Consist consist =  InstanceManager.getDefault(jmri.ConsistManager.class).getConsist(tf.getAddressPanel().getConsistAddress());
+            String consistName = "";
+            for (DccLocoAddress loco : consist.getConsistList()) {
+                String reName = consist.getRosterId(loco);
+                JLabel label;
+                if (reName != null) {
+                    consistName = " ["+reName+"]" + consistName ;
+                    label = new JLabel();
+                    ImageIcon icon;
+                    Boolean dir = consist.getLocoDirection(loco);
+                    if (dir) {
+                        icon = ICN_FACT.getIcon(reName);
+                    } else {
+                        icon = ICN_FACT.getReversedIcon(reName);
+                    }
+                    if (icon != null) {
+                        icon.setImageObserver(jtable);
+                        label.setIcon(icon);
+                    } else {
+                        label.setName(reName);
+                    }
+                } else {
+                     label = new JLabel("["+loco.toString()+"]");
+                     consistName = " ["+loco.toString()+"]" + consistName ;
+                }
+                consistPanel.add(label,0); //always add last at first, the consist is facing right
             }
-        } else {
-            text = Bundle.getMessage("ThrottleNotAssigned");
+            consistPanel.add(new JLabel(consistName));
+            retPanel.add(consistPanel, BorderLayout.CENTER);
+        } else { // regular locomotive
+            ImageIcon icon = null;
+            String text;
+            if (tf.getRosterEntry() != null) {
+                icon = ICN_FACT.getIcon(tf.getAddressPanel().getRosterEntry());
+                text = tf.getAddressPanel().getRosterEntry().getId();
+            } else if ((tf.getAddressPanel().getCurrentAddress() != null) && (tf.getAddressPanel().getThrottle() != null)) {
+                switch (tf.getAddressPanel().getCurrentAddress().getNumber()) {
+                    case 0:
+                        text = Bundle.getMessage("ThrottleDCControl") + " - " + tf.getAddressPanel().getCurrentAddress();
+                        break;
+                    case 3:
+                        text = Bundle.getMessage("ThrottleDCCControl") + " - " + tf.getAddressPanel().getCurrentAddress();
+                        break;
+                    default:
+                        text = Bundle.getMessage("ThrottleAddress") + " " + tf.getAddressPanel().getCurrentAddress();
+                        break;
+                }
+            } else {
+                text = Bundle.getMessage("ThrottleNotAssigned");
+            }
+            if (icon != null) {
+                icon.setImageObserver(jtable);
+            }
+            JLabel locoID = new JLabel();
+            locoID.setHorizontalAlignment(JLabel.CENTER);
+            locoID.setVerticalAlignment(JLabel.CENTER);
+            locoID.setIcon(icon);
+            locoID.setText(text);        
+            retPanel.add(locoID, BorderLayout.CENTER);
         }
-        if (icon != null) {
-            icon.setImageObserver(jtable);
-        }
-        JLabel locoID = new JLabel();
-        locoID.setHorizontalAlignment(JLabel.CENTER);
-        locoID.setVerticalAlignment(JLabel.CENTER);
-        locoID.setIcon(icon);
-        locoID.setText(text);
-        retPanel.add(locoID, BorderLayout.CENTER);
-
+        
         if (tf.getAddressPanel().getThrottle() != null) {
             final ThrottlesPreferences preferences = InstanceManager.getDefault(ThrottlesPreferences.class);
             JPanel ctrlPanel = new JPanel();
             ctrlPanel.setLayout(new BorderLayout());
             Throttle thr = tf.getAddressPanel().getThrottle();
+            // direction
             JLabel dir = new JLabel();
             if (preferences.isUsingExThrottle() && preferences.isUsingFunctionIcon()) {
                 if (thr.getIsForward()) {
@@ -93,6 +128,7 @@ public class ThrottlesTableCellRenderer implements TableCellRenderer {
             }
             dir.setVerticalAlignment(JLabel.CENTER);
             ctrlPanel.add(dir, BorderLayout.WEST);
+            // speed
             if (preferences.isUsingExThrottle() && preferences.isUsingFunctionIcon()) {
                 if (thr.getSpeedSetting() == -1) {
                     JLabel estop = new JLabel();
@@ -117,10 +153,36 @@ public class ThrottlesTableCellRenderer implements TableCellRenderer {
                 }
                 ctrlPanel.add(speedLabel, BorderLayout.CENTER);
             }
+            ctrlPanel.setOpaque(false);
             retPanel.add(ctrlPanel, BorderLayout.EAST);
         }
-
-        retPanel.setBorder(BorderFactory.createBevelBorder(BevelBorder.RAISED));
+        // visibility -> selected
+        if (tf.isVisible()) {
+            Color selBackground = javax.swing.UIManager.getDefaults().getColor("List.selectionBackground");
+            if (selBackground == null) {
+                selBackground = Color.ORANGE;
+            }
+            Color selForeground = javax.swing.UIManager.getDefaults().getColor("List.selectionForeground");
+            if (selForeground == null) {
+                selForeground = Color.BLACK;
+            }
+            retPanel.setBackground(selBackground);
+            setForegroundAllComp( retPanel, selForeground );
+            retPanel.setBorder(BorderFactory.createBevelBorder(BevelBorder.LOWERED));
+        } else {
+            retPanel.setBorder(BorderFactory.createBevelBorder(BevelBorder.RAISED));
+        }
         return retPanel;
+    }
+    
+    private void setForegroundAllComp(JComponent cmp, Color color) {
+        if (cmp != null) {
+            cmp.setForeground(color);
+            for (Component c : cmp.getComponents()) {
+                if (c instanceof JComponent) {
+                    setForegroundAllComp( (JComponent) c, color);
+                }
+            }
+        }
     }
 }

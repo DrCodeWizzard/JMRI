@@ -124,7 +124,7 @@ public final class DCCppConstants {
     public static final String OUTPUT_DELETE_REGEX = "\\s*Z\\s*(\\d+)\\s*"; // <Z ID>
     public static final String OUTPUT_LIST_REGEX = "\\s*Z\\s*"; // <Z>
     public static final String QUERY_SENSOR_STATES_REGEX = "\\s*Q\\s*"; // <Q>
-    public static final String LOCO_STATE_REGEX = "\\s*l\\s*(\\d+)\\s*(\\d+)\\s*(\\d+)\\s*(\\d+)\\s*"; // <l loco slot speedByte functions>
+    public static final String LOCO_STATE_REGEX = "\\s*l\\s*(\\d+)\\s*([-]*\\d+)\\s*(\\d+)\\s*(\\d+)\\s*"; // <l loco slot speedByte functions>
 
     public static final String WRITE_TO_EEPROM_REGEX = "E";
     public static final String CLEAR_EEPROM_REGEX = "e";
@@ -170,7 +170,7 @@ public final class DCCppConstants {
     public static final String DIAG_REPLY_REGEX        =   "^\\*\\s*([\\S\\s]*)\\*$"; //matches anything between leading and trailing asterisks, left-trimmed
     public static final String CURRENT_REPLY_REGEX =       "\\s*a\\s*(\\d+).*";
     public static final String CURRENT_REPLY_NAMED_REGEX = "\\s*a\\s*(\\w*?[a-zA-Z])\\s*(\\d+).*";
-    public static final String METER_REPLY_REGEX = " *c *(.+) +([\\d\\.]+) +([A-Z]) +(\\w+) +([\\d\\.]+) +([\\d\\.]+) +([\\d\\.]+) +([\\d\\.]+).*";
+    public static final String METER_REPLY_REGEX = " *c *(.+) +([-]*[\\d\\.]+) +([A-Z]) +(\\w+) +([\\d\\.]+) +([\\d\\.]+) +([\\d\\.]+) +([\\d\\.]+).*";
 
     public static final String TRACK_POWER_REPLY_REGEX =       "\\s*p\\s*([0,1])\\s*";
     public static final String TRACK_POWER_REPLY_NAMED_REGEX = "\\s*p\\s*(\\d+)\\s+(\\w+).*";
@@ -250,5 +250,30 @@ public final class DCCppConstants {
     public static final String PROP_PROFILE  = "Profile";
     public static final String PROP_IFLAG  =   "IFlag";
     public static final String PROP_PULLUP =   "Pullup";
+
+    //Referred to as Throttle commands for some reason
+    public static final char THROTTLE_COMMANDS         = 'J'; // First char of Jx two-letter commands
+    public static final char THROTTLE_COMMANDS_REPLY   = 'j'; // First char of Jx two-letter responses
+    public static final String TURNOUT_IDS             = "J T"; //Request turnout IDs
+    public static final String TURNOUT_IDS_REGEX       = "^J\\s*T$"; // <J T> or <JT>
+    public static final String TURNOUT_ID_REGEX        = "^J\\s*T\\s*(\\d+)$"; // <J T 123>
+    public static final String TURNOUT_IDS_REPLY_REGEX = "^j\\s*T\\s*((?:\\s*\\d+)*)$"; // <j T 123 456 789>
+    public static final String TURNOUT_ID_REPLY_REGEX  = "^j\\s*T\\s+(\\d+)\\s([C|T])\\s\\\"(.*)\\\""; // <jT 123 C "description">   
+    public static final String TURNOUT_IMPL_REGEX      = "^T\\s+(\\d+)\\s+X$"; // <T 123 X> Note: may be dropped from DCC-EX
+    public static final String CLOCK_REQUEST_TIME      = "J C"; //<J C> Request current time from DCC-EX
+    public static final String CLOCK_REQUEST_TIME_REGEX= "^J\\s*C$"; // <J C> or <JC>
+    public static final String CLOCK_SET_REGEX         = "^J\\s*C\\s+(\\d+)\\s*(\\d*)$"; // <J C 123 4> or <j C 124> outgoing set to 123min past midnight, rate 4
+    public static final String CLOCK_REPLY_REGEX       = "^j\\s*C\\s+(\\d+)\\s*(\\d*)$"; // <j C 123 4> or <j C 124> incoming version of above 
+    
+    //Track Manager (in 5.x)
+    public static final char   TRACKMANAGER_CMD        = '=';
+    public static final String TRACKMANAGER_CMD_REGEX  = "=";
+    public static final String TRACKMANAGER_REPLY_REGEX= "\\s*=\\s*[A-H]\\s+([A-Z]+)\\s*(\\d*)"; //<= A PROG> or <= B DC 1234>  
+
+    //LCD message
+    public static final char   LCD_TEXT_CMD         = '@'; //request that LCD messages be sent to this instance of JMRI
+    public static final String LCD_TEXT_CMD_REGEX   = "@";
+    public static final char   LCD_TEXT_REPLY       = '@';
+    public static final String LCD_TEXT_REPLY_REGEX = "^\\s*@\\s*(\\d+)\\s+(\\d+)\\s+\\\"(.*)\\\"$"; //<@ 0 3 "message text"> where 0 is display# and 3 is line#  
 
 }

@@ -5,10 +5,10 @@
   <title>JMRI Hardware Support - LocoNet&reg; Addressing</title>
   <meta name="author" content="Bob Jacobsen">
   <meta name="keywords" content="JMRI LocoNet Address Addressing Sensors Turnout">
-  <!--#include virtual="/Style.shtml" -->
+  <!--#include virtual="/help/en/parts/Style.shtml" -->
 </head>
 <body>
-  <!--#include virtual="/Header.shtml" -->
+  <!--#include virtual="/help/en/parts/Header.shtml" -->
 
   <div id="mBody">
     <!--#include virtual="Sidebar.shtml" -->
@@ -252,7 +252,7 @@
       <p>The message shown in the LocoNet Monitor window will typically look something like
       this:</p>
 
-      <pre>Sensor LS514 () is High.  (BDL16 # 33, DS2; DS54/DS64 # 65, SwiA/S1).</pre>
+      <pre>Sensor LS514 is High</pre>
       <p>This message is interpreted to mean that The sensor with "System Name" of "LS514" and an
       undefined (empty) "user name" is currently "High". In this particular case, the sensor is
       being used to report block occupancy detection, and "High" means that the block is
@@ -896,7 +896,7 @@
 
       <p>LocoNet&reg; is a registered trademark of <a href="https://www.digitrax.com/">Digitrax,
       Inc.</a></p>
-      <!--#include virtual="/Footer.shtml" -->
+      <!--#include virtual="/help/en/parts/Footer.shtml" -->
     </div>
     <!-- closes #mainContent-->
   </div>

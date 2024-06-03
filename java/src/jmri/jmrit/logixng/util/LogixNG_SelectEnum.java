@@ -69,6 +69,10 @@ public class LogixNG_SelectEnum<E extends Enum<?>> implements VetoableChangeList
         parseFormula();
     }
 
+    public boolean isDirectAddressing() {
+        return _addressing == NamedBeanAddressing.Direct;
+    }
+
     public NamedBeanAddressing getAddressing() {
         return _addressing;
     }
@@ -76,6 +80,10 @@ public class LogixNG_SelectEnum<E extends Enum<?>> implements VetoableChangeList
     public void setEnum(@Nonnull E e) {
         _base.assertListenersAreNotRegistered(log, "setEnum");
         _enum = e;
+    }
+
+    public boolean isEnum(E e) {
+        return _addressing == NamedBeanAddressing.Direct && _enum == e;
     }
 
     public E getEnum() {

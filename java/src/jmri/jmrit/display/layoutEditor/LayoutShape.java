@@ -10,10 +10,13 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.*;
+
 import javax.annotation.*;
 import javax.swing.*;
+
 import jmri.util.*;
 import jmri.util.swing.JmriColorChooser;
+import jmri.util.swing.JmriJOptionPane;
 import jmri.util.swing.JmriMouseEvent;
 
 /**
@@ -36,6 +39,7 @@ public class LayoutShape {
     private int lineWidth = 3;
     private Color lineColor = Color.BLACK;
     private Color fillColor = Color.DARK_GRAY;
+    private boolean hidden = false;
 
     // these are saved
     // list of LayoutShapePoints
@@ -171,6 +175,15 @@ public class LayoutShape {
         }
     }
 
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
+        getLayoutEditor().redrawPanel();
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
     public LayoutEditor getLayoutEditor() {
         return layoutEditor;
     }
@@ -302,9 +315,14 @@ public class LayoutShape {
      * @return Rectangle2D as bound of this shape
      */
     public Rectangle2D getBounds() {
-        Rectangle2D result = MathUtil.rectangleAtPoint(shapePoints.get(0).getPoint(), 1.0, 1.0);
+        Rectangle2D result;
 
-        shapePoints.forEach((lsp) -> result.add(lsp.getPoint()));
+        if (!shapePoints.isEmpty()) {
+            result = MathUtil.rectangleAtPoint(shapePoints.get(0).getPoint(), 1.0, 1.0);
+            shapePoints.forEach((lsp) -> result.add(lsp.getPoint()));
+        } else {
+            result = null;  // this should never happen... but just in case
+        }
         return result;
     }
 
@@ -415,6 +433,7 @@ public class LayoutShape {
     }
 
     private JPopupMenu popup = null;
+    private final JCheckBoxMenuItem hiddenCheckBoxMenuItem = new JCheckBoxMenuItem(Bundle.getMessage("ShapeHiddenMenuItemTitle"));
 
     @Nonnull
     protected JPopupMenu showShapePopUp(@CheckForNull JmriMouseEvent mouseEvent, HitPointType hitPointType) {
@@ -424,7 +443,6 @@ public class LayoutShape {
             popup = new JPopupMenu();
         }
         if (layoutEditor.isEditable()) {
-            int pointIndex = hitPointType.shapePointIndex();
 
             // JMenuItem jmi = popup.add(Bundle.getMessage("MakeLabel", Bundle.getMessage("LayoutShape")) + getName());
             JMenuItem jmi = popup.add(Bundle.getMessage("ShapeNameMenuItemTitle", getName()));
@@ -436,8 +454,17 @@ public class LayoutShape {
                         Bundle.getMessage("LayoutShapeName"),
                         Bundle.getMessage("LayoutShapeName"),
                         name);
-                setName(newValue);
-                layoutEditor.repaint();
+                LayoutEditorFindItems finder = layoutEditor.getFinder();
+                if (finder.findLayoutShapeByName(newValue) == null) {
+                    setName(newValue);
+                    layoutEditor.repaint();
+                } else {
+                    JmriJOptionPane.showMessageDialog(null,
+                        Bundle.getMessage("CanNotRename", Bundle.getMessage("Shape")),
+                        Bundle.getMessage("AlreadyExist", Bundle.getMessage("Shape")),
+                        JmriJOptionPane.ERROR_MESSAGE);
+
+                }
             });
 
             popup.add(new JSeparator(JSeparator.HORIZONTAL));
@@ -446,7 +473,8 @@ public class LayoutShape {
 //                jmi = popup.add("hitPointType: " + hitPointType);
 //                jmi.setEnabled(false);
 //            }
-// add "Change Shape Type to..." menu
+
+            // add "Change Shape Type to..." menu
             JMenu shapeTypeMenu = new JMenu(Bundle.getMessage("ChangeShapeTypeFromTo", getType().toString()));
             if (getType() != LayoutShapeType.Open) {
                 jmi = shapeTypeMenu.add(new JCheckBoxMenuItem(new AbstractAction(Bundle.getMessage("ShapeTypeOpen")) {
@@ -480,7 +508,7 @@ public class LayoutShape {
 
             popup.add(shapeTypeMenu);
 
-// Add "Change Shape Type from {0} to..." menu
+            // Add "Change Shape Type from {0} to..." menu
             if (hitPointType == HitPointType.SHAPE_CENTER) {
                 JMenu shapePointTypeMenu = new JMenu(Bundle.getMessage("ChangeAllShapePointTypesTo"));
                 jmi = shapePointTypeMenu.add(new JCheckBoxMenuItem(new AbstractAction(Bundle.getMessage("ShapePointTypeStraight")) {
@@ -505,8 +533,7 @@ public class LayoutShape {
 
                 popup.add(shapePointTypeMenu);
             } else {
-                LayoutShapePoint lsp = shapePoints.get(pointIndex);
-
+                LayoutShapePoint lsp = shapePoints.get(hitPointType.shapePointIndex());
                 if (lsp != null) { // this should never happen... but just in case...
                     String otherPointTypeName = (lsp.getType() == LayoutShapePointType.Straight)
                             ? LayoutShapePointType.Curve.toString() : LayoutShapePointType.Straight.toString();
@@ -529,7 +556,7 @@ public class LayoutShape {
                 }
             }
 
-// Add "Set Level: x" menu
+            // Add "Set Level: x" menu
             jmi = popup.add(new JMenuItem(Bundle.getMessage("MakeLabel",
                     Bundle.getMessage("ShapeLevelMenuItemTitle")) + level));
             jmi.setToolTipText(Bundle.getMessage("ShapeLevelMenuItemToolTip"));
@@ -569,7 +596,7 @@ public class LayoutShape {
                 jmi.setBackground(ColorUtil.contrast(fillColor));
             }
 
-// add "Set Line Width: x" menu
+            // add "Set Line Width: x" menu
             jmi = popup.add(new JMenuItem(Bundle.getMessage("MakeLabel",
                     Bundle.getMessage("ShapeLineWidthMenuItemTitle")) + lineWidth));
             jmi.setToolTipText(Bundle.getMessage("ShapeLineWidthMenuItemToolTip"));
@@ -603,22 +630,28 @@ public class LayoutShape {
                 });
                 jmi.setToolTipText(Bundle.getMessage("ShapeDuplicateMenuItemToolTip"));
 
+                popup.add(hiddenCheckBoxMenuItem);
+                hiddenCheckBoxMenuItem.addActionListener((java.awt.event.ActionEvent e3) ->
+                        setHidden(hiddenCheckBoxMenuItem.isSelected()));
+                hiddenCheckBoxMenuItem.setToolTipText(Bundle.getMessage("ShapeHiddenMenuItemToolTip"));
+                hiddenCheckBoxMenuItem.setSelected(isHidden());
+
                 popup.add(new AbstractAction(Bundle.getMessage("ButtonDelete")) {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        if (layoutEditor.removeLayoutShape(LayoutShape.this)) {
-                            // Returned true if user did not cancel
-                            remove();
-                            dispose();
-                        }
+                        removeShape();
                     }
                 });
             } else {
                 popup.add(new AbstractAction(Bundle.getMessage("ButtonDelete")) {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        shapePoints.remove(pointIndex);
-                        layoutEditor.repaint();
+                        if (shapePoints.size() == 1) {
+                            removeShape();
+                        } else {
+                            shapePoints.remove(hitPointType.shapePointIndex());
+                            layoutEditor.repaint();
+                        }
                     }
                 });
             }
@@ -628,6 +661,14 @@ public class LayoutShape {
         }
         return popup;
     }   // showPopup
+
+    void removeShape() {
+        if (layoutEditor.removeLayoutShape(LayoutShape.this)) {
+            // Returned true if user did not cancel
+            remove();
+            dispose();
+        }
+    }
 
     /**
      * Clean up when this object is no longer needed. Should not be called while
@@ -650,6 +691,10 @@ public class LayoutShape {
 
     //@Override
     protected void draw(Graphics2D g2) {
+        if (isHidden()) {
+            return;
+        }
+
         GeneralPath path = new GeneralPath();
 
         int idx, cnt = shapePoints.size();
@@ -731,7 +776,7 @@ public class LayoutShape {
         g2.setColor(controlsColor);
 
         shapePoints.forEach((slp) -> g2.draw(layoutEditor.layoutEditorControlRectAt(slp.getPoint())));
-        if (shapePoints.size() > 0) {
+        if (!shapePoints.isEmpty()) {
             Point2D end0 = shapePoints.get(0).getPoint();
             Point2D end1 = end0;
             for (LayoutShapePoint lsp : shapePoints) {

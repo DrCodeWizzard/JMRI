@@ -69,14 +69,13 @@ import jmri.util.HelpUtil;
 import jmri.util.WindowMenu;
 import jmri.util.datatransfer.RosterEntrySelection;
 import jmri.util.swing.JmriAbstractAction;
+import jmri.util.swing.JmriJOptionPane;
 import jmri.util.swing.JmriMouseAdapter;
 import jmri.util.swing.JmriMouseEvent;
 import jmri.util.swing.JmriMouseListener;
 import jmri.util.swing.ResizableImagePanel;
 import jmri.util.swing.WindowInterface;
 import jmri.util.swing.multipane.TwoPaneTBWindow;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A window for Roster management.
@@ -116,6 +115,7 @@ public class RosterFrame extends TwoPaneTBWindow implements RosterEntrySelector,
         this.allowInFrameServlet = false;
         this.setBaseTitle(name);
         this.buildWindow();
+        this.locoSelected(null);
     }
 
     final JRadioButtonMenuItem contextEdit = new JRadioButtonMenuItem(Bundle.getMessage("EditOnly"));
@@ -379,7 +379,7 @@ public class RosterFrame extends TwoPaneTBWindow implements RosterEntrySelector,
 
     boolean checkIfEntrySelected(boolean allowMultiple) {
         if ((re == null && !allowMultiple) || (this.getSelectedRosterEntries().length < 1)) {
-            JOptionPane.showMessageDialog(null, Bundle.getMessage("ErrorNoSelection"));
+            JmriJOptionPane.showMessageDialog(null, Bundle.getMessage("ErrorNoSelection"));
             return false;
         }
         return true;
@@ -425,6 +425,8 @@ public class RosterFrame extends TwoPaneTBWindow implements RosterEntrySelector,
         return rosterDetailPanel;
     }
 
+    private boolean isUpdatingSelection = false;
+
     JComponent createTop() {
         Object selectedRosterGroup = prefsMgr.getProperty(getWindowFrameRef(), SELECTED_ROSTER_GROUP);
         groups = new RosterGroupsPanel((selectedRosterGroup != null) ? selectedRosterGroup.toString() : null);
@@ -441,11 +443,23 @@ public class RosterFrame extends TwoPaneTBWindow implements RosterEntrySelector,
         rtable.getTable().getSelectionModel().addListSelectionListener((ListSelectionEvent e) -> {
             JTable table = rtable.getTable();
             if (!e.getValueIsAdjusting()) {
-                if (rtable.getSelectedRosterEntries().length == 1 && table.getSelectedRow() >= 0) {
+                if ((rtable.getSelectedRosterEntries().length == 1 ) && (table.getSelectedRow() >= 0)) {
                     log.debug("Selected row {}", table.getSelectedRow());
                     locoSelected(rtable.getModel().getValueAt(table.getRowSorter().convertRowIndexToModel(table.getSelectedRow()), RosterTableModel.IDCOL).toString());
-                } else if (rtable.getSelectedRosterEntries().length > 1 || table.getSelectedRow() < 0) {
+                } else if (rtable.getSelectedRosterEntries().length > 1) {
+                    log.debug("Multiple selection");
                     locoSelected(null);
+                } else if ( (table.getSelectedRow() < 0) && (!isUpdatingSelection) ) {
+                    isUpdatingSelection = true;
+                    if (re != null) { // can be null with multiple selection
+                        log.debug("Selected roster entry {}", re.getId());
+                        if (!rtable.setSelection(re)) {
+                            re = null; //nothng was found
+                        }
+                    }
+                    updateDetails();
+                    rtable.moveTableViewToSelected();
+                    isUpdatingSelection = false;
                 } // leave last selected item visible if no selection
             }
         });
@@ -708,14 +722,14 @@ public class RosterFrame extends TwoPaneTBWindow implements RosterEntrySelector,
                 message.setLayout(new BoxLayout(message, BoxLayout.Y_AXIS));
                 message.add(question);
                 message.add(remember);
-                int result = JOptionPane.showConfirmDialog(null,
+                int result = JmriJOptionPane.showConfirmDialog(null,
                         message,
                         rb.getString("MessageShortCloseWarning"),
-                        JOptionPane.YES_NO_OPTION);
+                        JmriJOptionPane.YES_NO_OPTION);
                 if (remember.isSelected()) {
                     prefsMgr.setSimplePreferenceState(rememberWindowClose, true);
                 }
-                if (result == JOptionPane.YES_OPTION) {
+                if (result == JmriJOptionPane.YES_OPTION) {
                     handleQuit();
                 }
             } else {
@@ -731,14 +745,14 @@ public class RosterFrame extends TwoPaneTBWindow implements RosterEntrySelector,
                 message.setLayout(new BoxLayout(message, BoxLayout.Y_AXIS));
                 message.add(question);
                 message.add(remember);
-                int result = JOptionPane.showConfirmDialog(null,
+                int result = JmriJOptionPane.showConfirmDialog(null,
                         message,
                         rb.getString("MessageShortCloseWarning"),
-                        JOptionPane.YES_NO_OPTION);
+                        JmriJOptionPane.YES_NO_OPTION);
                 if (remember.isSelected()) {
                     prefsMgr.setSimplePreferenceState(rememberWindowClose, true);
                 }
-                if (result == JOptionPane.YES_OPTION) {
+                if (result == JmriJOptionPane.YES_OPTION) {
                     handleQuit();
                 }
             } else {
@@ -813,7 +827,7 @@ public class RosterFrame extends TwoPaneTBWindow implements RosterEntrySelector,
      *
      * @param id ID of the selected roster entry
      */
-    void locoSelected(String id) {
+    final void locoSelected(String id) {
         if (id != null) {
             log.debug("locoSelected ID {}", id);
             if (re != null) {
@@ -1173,7 +1187,7 @@ public class RosterFrame extends TwoPaneTBWindow implements RosterEntrySelector,
             rtable.moveTableViewToSelected();
         } else {
             log.warn("Read address {}, but no such loco in roster", dccAddress); //"No roster entry found; changed to promote the number to the front, June 2022,  Bill Chown"
-            JOptionPane.showMessageDialog(this, dccAddress + " was read from the decoder\nbut has not been found in the Roster", dccAddress + " No roster entry found", JOptionPane.INFORMATION_MESSAGE);
+            JmriJOptionPane.showMessageDialog(this, dccAddress + " was read from the decoder\nbut has not been found in the Roster", dccAddress + " No roster entry found", JmriJOptionPane.INFORMATION_MESSAGE);
         }
     }
 
@@ -1317,7 +1331,7 @@ public class RosterFrame extends TwoPaneTBWindow implements RosterEntrySelector,
         // if failed to get programmer, tell user and stop
         if (programmer == null) {
             log.error("Identify loco called when no service mode programmer is available; button should have been disabled");
-            JOptionPane.showMessageDialog(null, Bundle.getMessage("IdentifyError"));
+            JmriJOptionPane.showMessageDialog(null, Bundle.getMessage("IdentifyError"));
             return;
         }
 
@@ -1424,6 +1438,14 @@ public class RosterFrame extends TwoPaneTBWindow implements RosterEntrySelector,
             model.setText(value);
             owner.setText(value);
             locoImage.setImagePath(null);
+            service.setEnabled(false);
+            ops.setEnabled(false);
+            edit.setEnabled(false);          
+            prog1Button.setEnabled(false);
+            prog2Button.setEnabled(false);
+            throttleLabels.setEnabled(false);
+            rosterMedia.setEnabled(false);
+            throttleLaunch.setEnabled(false );            
         } else {
             filename.setText(re.getFileName());
             dateUpdated.setText((re.getDateModified() != null)
@@ -1444,6 +1466,9 @@ public class RosterFrame extends TwoPaneTBWindow implements RosterEntrySelector,
             } else {
                 locoImage.setVisible(true);
             }
+            service.setEnabled(true);
+            ops.setEnabled(true);
+            edit.setEnabled(true);                      
             prog1Button.setEnabled(true);
             prog2Button.setEnabled(true);
             throttleLabels.setEnabled(true);
@@ -1721,6 +1746,6 @@ public class RosterFrame extends TwoPaneTBWindow implements RosterEntrySelector,
             return true;
         }
     }
-    private final static Logger log = LoggerFactory.getLogger(RosterFrame.class);
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(RosterFrame.class);
 
 }

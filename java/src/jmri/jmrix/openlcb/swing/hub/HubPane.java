@@ -19,6 +19,7 @@ import jmri.jmrix.can.CanSystemConnectionMemo;
 import jmri.jmrix.can.adapters.gridconnect.GridConnectMessage;
 import jmri.jmrix.can.adapters.gridconnect.GridConnectReply;
 import jmri.jmrix.can.swing.CanPanelInterface;
+import jmri.util.swing.JmriJOptionPane;
 import jmri.util.zeroconf.ZeroConfService;
 import jmri.util.zeroconf.ZeroConfServiceManager;
 
@@ -140,15 +141,30 @@ public class HubPane extends jmri.util.swing.JmriPanel implements CanListener, C
     }
 
     private void addInetAddresses(){
-        ZeroConfServiceManager manager = InstanceManager.getDefault(ZeroConfServiceManager.class);
-        Set<InetAddress> addresses = manager.getAddresses(ZeroConfServiceManager.Protocol.All, false, true);
-        for (InetAddress ha : addresses) {
-            textArea.append( System.lineSeparator() + Bundle.getMessage(("IpAddressLine"), // NOI18N
-            !ha.getHostAddress().equals(ha.getHostName()) ? ha.getHostName() : "",
-            ha.isLoopbackAddress() ? " Loopback" : "", // NOI18N
-            ha.isLinkLocalAddress() ? " LinkLocal" : "", // NOI18N
-            ha.getHostAddress() + ":" + hub.getPort()));
-        }
+        var t = jmri.util.ThreadingUtil.newThread(() -> {
+
+                log.trace("start addInetAddresses");
+                ZeroConfServiceManager manager = InstanceManager.getDefault(ZeroConfServiceManager.class);
+                Set<InetAddress> addresses = manager.getAddresses(ZeroConfServiceManager.Protocol.All, true, true);
+                for (InetAddress ha : addresses) {
+    
+                    var hostAddress = ha.getHostAddress();
+                    var hostName = ha.getHostName();
+                    var hostNameDup = !hostAddress.equals(hostName) ? hostName : "";
+                    var isLoopBack = ha.isLoopbackAddress() ? " Loopback" : ""; // NOI18N
+                    var isLinkLocal = ha.isLinkLocalAddress() ? " LinkLocal" : ""; // NOI18N
+                    var port = String.valueOf(hub.getPort());
+        
+                    jmri.util.ThreadingUtil.runOnGUIEventually( () -> {
+                        textArea.append( System.lineSeparator() + Bundle.getMessage(("IpAddressLine"), // NOI18N
+                            hostNameDup, isLoopBack, isLinkLocal, hostAddress, port));
+                        log.trace("    added a line");
+                    });
+                }
+                log.trace("end addInetAddresses");
+            },
+            memo.getUserName() + " Hub Thread");
+        t.start();    
     }
 
     Thread t;
@@ -211,8 +227,12 @@ public class HubPane extends jmri.util.swing.JmriPanel implements CanListener, C
     protected String zero_conf_addr = "_openlcb-can._tcp.local.";
 
     protected void advertise(int port) {
+        log.trace("start advertise");
         _zero_conf_service = ZeroConfService.create(zero_conf_addr, port);
+        log.trace("start publish");
         _zero_conf_service.publish();
+        log.trace("end publish and advertise");
+        
     }
 
     @Override
@@ -252,11 +272,11 @@ public class HubPane extends jmri.util.swing.JmriPanel implements CanListener, C
         JCheckBox checkbox = new JCheckBox(Bundle.getMessage("SendLineTermination")); // NOI18N
         checkbox.setSelected(_send_line_endings);
         Object[] params = {Bundle.getMessage("LineTermSettingDialog"), checkbox }; // NOI18N
-        int result = JOptionPane.showConfirmDialog(this, 
+        int result = JmriJOptionPane.showConfirmDialog(this, 
             params,
             Bundle.getMessage("SendLineTermination"), // NOI18N
-            JOptionPane.OK_CANCEL_OPTION);
-        if (result == JOptionPane.OK_OPTION) {
+            JmriJOptionPane.OK_CANCEL_OPTION);
+        if (result == JmriJOptionPane.OK_OPTION) {
             _send_line_endings = checkbox.isSelected();
             userPreferencesManager.setSimplePreferenceState(getClass().getName() + USER_SAVED, true); // NOI18N
             userPreferencesManager.setSimplePreferenceState(getClass().getName() + USER_SEND_LINE_ENDINGS, _send_line_endings); // NOI18N
@@ -267,11 +287,11 @@ public class HubPane extends jmri.util.swing.JmriPanel implements CanListener, C
         JCheckBox checkbox = new JCheckBox(Bundle.getMessage("RequireLineTermination")); // NOI18N
         checkbox.setSelected(this.getRequireLineEndingsFromUserPref());
         Object[] params = {Bundle.getMessage("LineTermSettingDialog"), checkbox }; // NOI18N
-        int result = JOptionPane.showConfirmDialog(this, 
+        int result = JmriJOptionPane.showConfirmDialog(this, 
             params,
             Bundle.getMessage("RequireLineTermination"), // NOI18N
-            JOptionPane.OK_CANCEL_OPTION);
-        if (result == JOptionPane.OK_OPTION) {
+            JmriJOptionPane.OK_CANCEL_OPTION);
+        if (result == JmriJOptionPane.OK_OPTION) {
             userPreferencesManager.setSimplePreferenceState(getClass().getName() + USER_REQUIRE_LINE_ENDINGS, checkbox.isSelected()); // NOI18N
         }
     }

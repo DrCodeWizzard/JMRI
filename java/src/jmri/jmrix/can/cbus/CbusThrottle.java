@@ -3,18 +3,54 @@ package jmri.jmrix.can.cbus;
 import jmri.DccLocoAddress;
 import jmri.LocoAddress;
 import jmri.SpeedStepMode;
+import jmri.ThrottleManager;
 import jmri.jmrix.AbstractThrottle;
 import jmri.jmrix.can.CanSystemConnectionMemo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * An implementation of DccThrottle via AbstractThrottle with code specific to a
  * CBUS connection.
  * <p>
  * Speed in the Throttle interfaces and AbstractThrottle is a float, but in CBUS
- * is an int with values from 0 to 127.
- *
+ * is normally an int with values from 0 to 127.
+ * <table>
+ * <caption>CBUS 128 Speed Steps</caption>
+ * <tr><td>setSpeedSetting</td><td>CBUS DSPD</td><td>Translated</td><td>Throttle</td></tr>
+ * <tr><td>0</td><td> 0 </td><td> Speed 0 </td><td> 0 % </td></tr>
+ * <tr><td>-1</td><td> 1 </td><td> E Stop </td><td> 0 % </td></tr>
+ * <tr><td>0.007937</td><td> 2 </td><td> Speed 1 </td><td> 1/126 % </td></tr>
+ * <tr><td>0.015873</td><td> 3 </td><td> Speed 2 </td><td> 2/126 % </td></tr>
+ * <tr><td>0.984127</td><td> 125 </td><td> Speed 124 </td><td> 124/126 % </td></tr>
+ * <tr><td>0.992063</td><td> 126 </td><td> Speed 125 </td><td> 125/126 % </td></tr>
+ * <tr><td>1</td><td> 127 </td><td> Speed 126 </td><td> 100 % </td></tr>
+ * </table>
+ * 
+ * <table>
+ * <caption>CBUS 28 Speed Steps</caption>
+ * <tr><td>CBUS DSPD</td><td>Translated</td><td>Throttle</td></tr>
+ * <tr><td> 0 </td><td> Speed 0 Encoding 1 </td><td> 0 % </td></tr>
+ * <tr><td> 1 </td><td> Speed 0 Encoding 2 </td><td> 0 % </td></tr>
+ * <tr><td> 2 </td><td> E Stop Encoding 1 </td><td> 0 % </td></tr>
+ * <tr><td> 3 </td><td> E Stop Encoding 2 </td><td> 0 % </td></tr>
+ * <tr><td> 4 </td><td> Speed 1 </td><td> 1/28 % </td></tr>
+ * <tr><td> 5 </td><td> Speed 2 </td><td> 2/28 % </td></tr>
+ * <tr><td> 29 </td><td> Speed 26 </td><td> 26/28 % </td></tr>
+ * <tr><td> 30 </td><td> Speed 27 </td><td> 27/28 % </td></tr>
+ * <tr><td> 31 </td><td> Speed 28 </td><td> 100 % </td></tr>
+ * </table>
+ * 
+ * <table>
+ * <caption>CBUS 14 Speed Steps</caption>
+ * <tr><td>CBUS DSPD</td><td>Translated</td><td>Throttle</td></tr>
+ * <tr><td> 0 </td><td> Speed 0  </td><td> 0 % </td></tr>
+ * <tr><td> 1 </td><td> E Stop </td><td> 0 % </td></tr>
+ * <tr><td> 2 </td><td> Speed 1 </td><td> 1/14 % </td></tr>
+ * <tr><td> 3 </td><td> Speed 2 </td><td> 2/14 % </td></tr>
+ * <tr><td> 13 0x0D </td><td> Speed 12 </td><td> 12/14 % </td></tr>
+ * <tr><td> 14 0x0E </td><td> Speed 13 </td><td> 13/14 % </td></tr>
+ * <tr><td> 15 0x0F </td><td> Speed 14 </td><td> 100 % </td></tr>
+ * </table>
+ * 
  * @author Andrew Crosland Copyright (C) 2009
  */
 public class CbusThrottle extends AbstractThrottle {
@@ -83,15 +119,15 @@ public class CbusThrottle extends AbstractThrottle {
      * CBUS Command stations also default to 128SS so this does not
      * need to be sent if unchanged.
      *
-     * @param Mode the current speed step mode - default should be 128
+     * @param stepMode the current speed step mode - default should be 128
      *              speed step mode in most cases
      */
     @Override
-    public void setSpeedStepMode(SpeedStepMode Mode) {
-        if (speedStepMode==Mode){
+    public void setSpeedStepMode(SpeedStepMode stepMode) {
+        if (speedStepMode==stepMode){
             return;
         }
-        super.setSpeedStepMode(Mode);
+        super.setSpeedStepMode(stepMode);
         int mode;
         switch (speedStepMode) {
             case NMRA_DCC_28:
@@ -113,13 +149,29 @@ public class CbusThrottle extends AbstractThrottle {
      * @return float value -1 to 1
      */
     protected float floatSpeed(int lSpeed) {
+        if (this.getSpeedStepMode()== SpeedStepMode.NMRA_DCC_28) {
+            float toReturn = 0.f;
+            switch (lSpeed) {
+                case 0:
+                case 1:
+                    break;
+                case 2:
+                case 3:
+                    toReturn =  -1.f;   // estop
+                    break;
+                default:
+                    toReturn = ((lSpeed - 3) / (float) speedStepMode.numSteps );
+            }
+            return Math.min(toReturn, 1.0f); // return smallest value
+        }
+
         switch (lSpeed) {
             case 0:
                 return 0.f;
             case 1:
                 return -1.f;   // estop
             default:
-                return ((lSpeed - 1) / 126.f);
+                return ((lSpeed - 1) / (float) speedStepMode.numSteps );
         }
     }
 
@@ -177,7 +229,7 @@ public class CbusThrottle extends AbstractThrottle {
         int totVal = 0;
         for ( int i=0; i<CbusConstants.MAX_FUNCTIONS; i++ ){
             if (FUNCTION_GROUPS[i]==group && getFunction(i)){
-                totVal = totVal + CbusConstants.CBUS_FUNCTION_BITS[i];
+                totVal += CbusConstants.CBUS_FUNCTION_BITS[i];
             }
         }
         cs.setFunctions(group, _handle, totVal);
@@ -199,40 +251,62 @@ public class CbusThrottle extends AbstractThrottle {
      * @param speed Number from 0 to 1; less than zero is emergency stop
      */
     @Override
-    public synchronized void setSpeedSetting(float speed) {
-        log.debug("setSpeedSetting({}) ", speed);
+    public synchronized void setSpeedSetting(float speed, boolean allowDuplicates, boolean allowDuplicatesOnStop) {
+        log.debug("setSpeedSetting({})", speed);
         float oldSpeed = this.speedSetting;
         this.speedSetting = speed;
         if (speed < 0) {
             this.speedSetting = -1.f;
         }
 
-        setDispatchActive(!(this.speedSetting <= 0));
+        setDispatchActive(this.speedSetting > 0);
 
-        if (Math.abs(oldSpeed - this.speedSetting) > 0.0001) {
+        if ( oldCbusSpeed != getCbusSpeedDirection() || allowDuplicates || ( speed==0 && allowDuplicatesOnStop ) ) {
             sendToLayout();
             firePropertyChange(SPEEDSETTING, oldSpeed, this.speedSetting);
             record(this.speedSetting); // float
         }
     }
+
+    private synchronized int getCbusSpeedFromFloat(){
+        switch (speedStepMode) {
+            case NMRA_DCC_28:
+                int ints = intSpeed( this.speedSetting, 29 ); 
+                // speed 1 starts at cbus 4, not 2. 
+                if (ints>1){
+                    ints += 2;
+                }
+                return ints;
+            case NMRA_DCC_14:
+                return intSpeed( this.speedSetting, 15 );
+            case NMRA_DCC_128:
+            default:
+                // cbus speeds 0x00 to 0x80 , excluding 0x01 for estop gives 127 possible values including 0.
+                return intSpeed( this.speedSetting );
+        }
+    }
     
-    // TODO - use intSpeed( speedSetting, SPEED_STEPS )
+    private synchronized int getCbusSpeedDirection(){
+        int speed = getCbusSpeedFromFloat();
+        if (this.isForward) {
+            speed |= 0x80;
+        }
+        return speed;
+    }
+
+    private int oldCbusSpeed = -2;
+
     // following a speed or direction change, sends to layout
     private void sendToLayout() {
-        int new_spd;
-        synchronized(this) {
-            new_spd = intSpeed(this.speedSetting);
-        }
-        if (this.isForward) {
-            new_spd = new_spd | 0x80;
-        }
-        log.debug("Sending speed/dir for speed: {}",new_spd);
+        oldCbusSpeed = getCbusSpeedDirection();
+        
+        log.debug("Sending speed/dir for speed: {}",oldCbusSpeed);
         // reset timeout
         mRefreshTimer.stop();
         mRefreshTimer.setRepeats(true);
         mRefreshTimer.start();
         if (cs != null ) {
-            cs.setSpeedDir(_handle, new_spd);
+            cs.setSpeedDir(_handle, oldCbusSpeed);
         }
     }
 
@@ -254,9 +328,9 @@ public class CbusThrottle extends AbstractThrottle {
             this.speedSetting = -1.f;
         }
 
-        setDispatchActive(!(this.speedSetting <= 0));
+        setDispatchActive(this.speedSetting > 0);
 
-        if (Math.abs(oldSpeed - this.speedSetting) > 0.0001) {
+        if (Math.abs(oldSpeed - this.speedSetting) > 0.0001) { // an increment FROM CBUS will always be > 0.00793
             firePropertyChange(SPEEDSETTING, oldSpeed, this.speedSetting);
             record(this.speedSetting); // float
         }
@@ -410,9 +484,7 @@ public class CbusThrottle extends AbstractThrottle {
 
     // CBUS command stations expect DSPD per sesison every 4s
     protected final void startRefresh() {
-        mRefreshTimer = new javax.swing.Timer(4000, (java.awt.event.ActionEvent e) -> {
-            keepAlive();
-        });
+        mRefreshTimer = new javax.swing.Timer(4000, (java.awt.event.ActionEvent e) -> keepAlive());
         mRefreshTimer.setRepeats(true);     // refresh until stopped by dispose
         mRefreshTimer.start();
     }
@@ -420,7 +492,7 @@ public class CbusThrottle extends AbstractThrottle {
     /**
      * Internal routine to resend the speed on a timeout
      */
-    synchronized private void keepAlive() {
+    private synchronized void keepAlive() {
         if (cs != null) { // cs can be null if in process of terminating?
             cs.sendKeepAlive(_handle);
 
@@ -456,8 +528,8 @@ public class CbusThrottle extends AbstractThrottle {
             return;
         }
         
-        if (newval == true){
-            int numThrottles = jmri.InstanceManager.throttleManagerInstance().getThrottleUsageCount(dccAddress);
+        if ( newval ) {
+            int numThrottles = adapterMemo.get(ThrottleManager.class).getThrottleUsageCount(dccAddress);
             log.debug("numThrottles {}",numThrottles);
             if ( numThrottles < 2 ){
                 notifyThrottleReleaseEnabled(false);
@@ -469,7 +541,6 @@ public class CbusThrottle extends AbstractThrottle {
         notifyThrottleDispatchEnabled(false);
     }
 
-    // initialize logging
-    private final static Logger log = LoggerFactory.getLogger(CbusThrottle.class);
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CbusThrottle.class);
 
 }

@@ -7,8 +7,6 @@ import javax.swing.BoxLayout;
 import javax.swing.JPanel;
 import jmri.InstanceManager;
 import jmri.Turnout;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Frame to control a single turnout.
@@ -182,14 +180,12 @@ public class SimpleTurnoutCtrlFrame extends jmri.util.JmriJFrame implements java
                     adrTextField.getText());
 
             turnout.addPropertyChangeListener(this);
-            updateTurnoutStatusFields();
-            if (turnout.getCommandedState() == Turnout.CLOSED) {
-                nowStateLabel.setText(InstanceManager
-                        .turnoutManagerInstance().getClosedText());
-            }
+
             log.debug("about to command CLOSED");
             // and set commanded state to CLOSED
             turnout.setCommandedState(Turnout.CLOSED);
+
+            updateTurnoutStatusFields();
 
         } catch (IllegalArgumentException ex1) {
             invalidTurnout(adrTextField.getText(), ex1);
@@ -214,14 +210,13 @@ public class SimpleTurnoutCtrlFrame extends jmri.util.JmriJFrame implements java
                     adrTextField.getText());
 
             turnout.addPropertyChangeListener(this);
-            updateTurnoutStatusFields();
-            if (turnout.getCommandedState() == Turnout.THROWN) {
-                nowStateLabel.setText(InstanceManager
-                        .turnoutManagerInstance().getThrownText());
-            }
+
             log.debug("about to command THROWN");
             // and set commanded state to THROWN
             turnout.setCommandedState(Turnout.THROWN);
+            
+            updateTurnoutStatusFields();
+            
         } catch (IllegalArgumentException ex1) {
             invalidTurnout(adrTextField.getText(), ex1);
         } catch (Exception ex2) {
@@ -382,7 +377,7 @@ public class SimpleTurnoutCtrlFrame extends jmri.util.JmriJFrame implements java
 
     void invalidTurnout(String name, Exception ex) {
         jmri.InstanceManager.getDefault(jmri.UserPreferencesManager.class)
-                .showErrorMessage(Bundle.getMessage("ErrorTitle"),
+                .showErrorMessage(this, Bundle.getMessage("ErrorTitle"),
                         (Bundle.getMessage("ErrorConvertHW", name)),
                         ex.toString(), "", true, false);
     }
@@ -390,6 +385,6 @@ public class SimpleTurnoutCtrlFrame extends jmri.util.JmriJFrame implements java
     Turnout turnout = null;
     String newState = "";
 
-    private final static Logger log = LoggerFactory.getLogger(SimpleTurnoutCtrlFrame.class);
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SimpleTurnoutCtrlFrame.class);
 
 }

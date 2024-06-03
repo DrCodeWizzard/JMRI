@@ -27,7 +27,6 @@ import jmri.jmrit.logixng.tools.swing.LocalVariableTableModel;
  * <p>
  * Most of the text used in this GUI is in BeanTableBundle.properties, accessed
  * via Bundle.getMessage().
- * <p>
  *
  * @author Dave Duchamp Copyright (C) 2007 (LogixTableAction)
  * @author Pete Cressman Copyright (C) 2009, 2010, 2011 (LogixTableAction)
@@ -175,6 +174,11 @@ public class LogixNGGlobalVariableTableAction extends AbstractLogixNGTableAction
         return "LogixNGCreateGlobalVariableButtonHint";
     }
 
+    @Override
+    protected String helpTarget() {
+        return "package.jmri.jmrit.beantable.LogixNGGlobalVariables";  // NOI18N
+    }
+
     /**
      * Create or copy bean frame.
      *
@@ -186,8 +190,8 @@ public class LogixNGGlobalVariableTableAction extends AbstractLogixNGTableAction
     @Override
     protected JPanel makeAddFrame(String titleId, String startMessageId) {
         addLogixNGFrame = new JmriJFrame(Bundle.getMessage(titleId));
-//        addLogixNGFrame.addHelpMenu(
-//                "package.jmri.jmrit.beantable.LogixNGGlobalVariableTable", true);     // NOI18N
+        addLogixNGFrame.addHelpMenu(
+                "package.jmri.jmrit.beantable.LogixNGGlobalVariables", true);     // NOI18N
         addLogixNGFrame.setLocation(50, 30);
         Container contentPane = addLogixNGFrame.getContentPane();
         contentPane.setLayout(new BoxLayout(contentPane, BoxLayout.Y_AXIS));
@@ -409,10 +413,10 @@ public class LogixNGGlobalVariableTableAction extends AbstractLogixNGTableAction
                     try {
                         gv.initialize();
                     } catch (JmriException | RuntimeException e) {
-                        JOptionPane.showMessageDialog(null,
+                        jmri.util.swing.JmriJOptionPane.showMessageDialog(null,
                                 e.getLocalizedMessage(),
                                 Bundle.getMessage("ErrorTitle"), // NOI18N
-                                JOptionPane.ERROR_MESSAGE);
+                                jmri.util.swing.JmriJOptionPane.ERROR_MESSAGE);
                     }
                     break;
 
